@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product - DigitalStore</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Inter, Arial, sans-serif; background: #08090d; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .form-container { width: 100%; max-width: 500px; background: #111319; border: 1px solid #20232c; padding: 30px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        h2 { font-size: 24px; margin-bottom: 20px; text-align: center; }
+        h2 span { color: #ed1c24; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; color: #aaa; margin-bottom: 6px; }
+        input, textarea { width: 100%; padding: 12px; background: #191b22; border: 1px solid #282b34; border-radius: 8px; color: white; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        input:focus, textarea:focus { border-color: #ed1c24; }
+        textarea { resize: vertical; height: 90px; }
+        .submit-btn { width: 100%; padding: 12px; background: #ed1c24; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        .submit-btn:hover { background: #ff3038; }
+        .back-link { display: block; text-align: center; margin-top: 15px; color: #888; text-decoration: none; font-size: 13px; }
+        .back-link:hover { color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h2>Add New <span>E-Product</span></h2>
+        <form method="POST">
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" name="name" placeholder="Jaise: Python Masterclass" required>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" name="category" placeholder="Jaise: E-Book ya Comic" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" placeholder="Product ke baare me thoda batayein..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Price (₹)</label>
+                <input type="number" name="price" placeholder="199" required>
+            </div>
+            <div class="form-group">
+                <label>Image URL</label>
+                <input type="url" name="image" placeholder="https://image-link.com/photo.jpg" required>
+            </div>
+            <div class="form-group">
+                <label>WhatsApp Number (Country code ke sath)</label>
+                <input type="text" name="whatsapp_no" placeholder="919876543210" required>
+            </div>
+            <button type="submit" class="submit-btn">Add Product to Store</button>
+        </form>
+        <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Store</a>
+    </div>
+
+</body>
+</html>

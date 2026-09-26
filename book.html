@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="hi" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Rectangular Book - Reader with Gemini AI</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- PDF.js library for client-side PDF parsing and rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Literata', 'Georgia', 'serif'],
+                        heading: ['Cinzel', 'serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        book: {
+                            paper: '#FAF6EE',
+                            sepia: '#F4ECD8',
+                            darkBg: '#121316',
+                            darkPaper: '#1E2026',
+                            textDark: '#2B2621',
+                            textLight: '#E2E8F0',
+                            accent: '#8B4513',
+                            gold: '#D4AF37'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Hide all scrollbars globally */
+        * {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        ::-webkit-scrollbar {
+            display: none;
+            width: 0px;
+            height: 0px;
+            background: transparent;
+        }
+
+        .perspective-1000 {
+            perspective: 1200px;
+        }
+
+        .book-spread {
+            position: relative;
+            transform-style: preserve-3d;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+            cursor: grab;
+        }
+        .book-spread:active {
+            cursor: grabbing;
+        }
+
+        /* Spine center gradient */
+        .book-spine-line {
+            background: linear-gradient(to right, 
+                rgba(0,0,0,0.18) 0%, 
+                rgba(0,0,0,0.3) 48%, 
+                rgba(0,0,0,0.55) 50%, 
+                rgba(0,0,0,0.3) 52%, 
+                rgba(0,0,0,0.18) 100%
+            );
+        }
+
+        /* Corner circular navigation button styling */
+        .corner-btn {
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .corner-btn:hover {
+            transform: scale(1.15) translateY(-2px);
+            box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+        }
+        .corner-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Page stack edge FX */
+        .book-left-edge {
+            border-left: 8px solid rgba(139, 69, 19, 0.3);
+            box-shadow: -5px 0 10px rgba(0, 0, 0, 0.15);
+        }
+        .book-right-edge {
+            border-right: 8px solid rgba(139, 69, 19, 0.3);
+            box-shadow: 5px 0 10px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Theme styles */
+        body.theme-paper {
+            background: #2D2724;
+            color: #2B2621;
+        }
+        body.theme-paper .book-page {
+            background-color: #FAF6EE;
+            color: #2D2724;
+        }
+
+        body.theme-sepia {
+            background: #231E18;
+            color: #382513;
+        }
+        body.theme-sepia .book-page {
+            background-color: #F4ECD8;
+            color: #382513;
+        }
+
+        body.theme-dark {
+            background: #0B0C0E;
+            color: #E2E8F0;
+        }
+        body.theme-dark .book-page {
+            background-color: #1A1C23;
+            color: #E2E8F0;
+        }
+
+        body.theme-parchment {
+            background: #1C1814;
+            color: #291C0E;
+        }
+        body.theme-parchment .book-page {
+            background-color: #F0E6D2;
+            background-image: radial-gradient(#e2d5bd 1px, transparent 0);
+            background-size: 16px 16px;
+            color: #291C0E;
+        }
+
+        /* Closed book cover styling */
+        .closed-book-card {
+            width: 320px;
+            height: 480px;
+            background: linear-gradient(135deg, #4A1512 0%, #2B0B0A 60%, #170504 100%);
+            border-radius: 8px 18px 18px 8px;
+            box-shadow: 
+                -12px 0 20px rgba(0,0,0,0.5),
+                15px 25px 45px rgba(0,0,0,0.6),
+                inset 2px 0 5px rgba(255,255,255,0.2),
+                inset -4px -4px 10px rgba(0,0,0,0.6);
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+        }
+        @media (min-width: 640px) {
+            .closed-book-card {
+                width: 380px;
+                height: 560px;
+            }
+        }
+        .closed-book-card:hover {
+            transform: scale(1.04) rotateY(-8deg) rotateX(4deg);
+            box-shadow: 
+                -18px 0 25px rgba(0,0,0,0.6),
+                25px 35px 55px rgba(0,0,0,0.7),
+                0 0 25px rgba(212, 175, 55, 0.3);
+        }
+
+        .closed-book-spine {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 24px;
+            background: linear-gradient(to right, #170504, #5C1D18 50%, #2B0B0A);
+            border-radius: 8px 0 0 8px;
+            box-shadow: inset -2px 0 5px rgba(0,0,0,0.5);
+        }
+
+        .closed-book-pages-stack {
+            position: absolute;
+            right: -10px;
+            top: 8px;
+            bottom: 8px;
+            width: 12px;
+            background: repeating-linear-gradient(to bottom, #FAF6EE 0px, #EAE2D0 2px, #FAF6EE 4px);
+            border-radius: 0 4px 4px 0;
+            box-shadow: 3px 0 6px rgba(0,0,0,0.4);
+        }
+
+        .opening-animation {
+            animation: unfoldBook 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes unfoldBook {
+            0% {
+                transform: scale(1) rotateY(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.08) rotateY(-90deg);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(1) rotateY(-180deg);
+                opacity: 0;
+            }
+        }
+
+        /* Generated Illustration styling */
+        .page-illustration {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid rgba(139, 69, 19, 0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin: 12px 0;
+        }
+
+        /* 1-Second 3D Page Turn Animation Styles */
+        .flip-leaf {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 50%;
+            height: 100%;
+            z-index: 40;
+            transform-style: preserve-3d;
+            transition: transform 1s cubic-bezier(0.42, 0, 0.58, 1);
+            pointer-events: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        }
+        .flip-leaf-right {
+            right: 0;
+            transform-origin: left center;
+        }
+        .flip-leaf-left {
+            left: 0;
+            transform-origin: right center;
+        }
+        .flip-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            overflow: hidden;
+        }
+        .flip-face-back {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+
+<body class="theme-paper h-full font-sans antialiased flex flex-col justify-between select-none overflow-x-hidden">
+
+    <!-- HEADER TOOLBAR -->
+    <header class="w-full bg-black/40 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between z-30 text-white flex-wrap gap-2">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-full bg-amber-600 flex items-center justify-center font-heading text-xl shadow-lg">
+                <i class="fa-solid fa-book-open text-amber-100"></i>
+            </div>
+            <div>
+                <h1 id="bookTitleDisplay" class="font-heading font-bold text-base sm:text-lg leading-tight tracking-wide text-amber-200">The Golden Codex</h1>
+                <p class="text-xs text-gray-300">Interactive Rectangular Reader & Gemini AI Studio</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2 sm:space-x-3 flex-wrap gap-y-2">
+            <!-- Close Book Header Button -->
+            <button id="closeBookHeaderBtn" onclick="closeBook()" class="px-3 py-1.5 rounded-lg bg-amber-800/80 hover:bg-amber-700 text-amber-100 text-xs sm:text-sm font-semibold flex items-center space-x-2 transition shadow border border-amber-500/30 hidden" title="Close Book Cover">
+                <i class="fa-solid fa-book"></i>
+                <span>Close Book</span>
+            </button>
+
+            <!-- PDF Upload Button -->
+            <label class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs sm:text-sm font-semibold flex items-center space-x-2 cursor-pointer shadow-md transition">
+                <i class="fa-solid fa-file-pdf text-amber-100"></i>
+                <span>Upload PDF</span>
+                <input type="file" id="pdfFileInput" accept="application/pdf" class="hidden" onchange="handlePdfUpload(event)">
+            </label>
+
+            <!-- Speech & Voice Controls -->
+            <div class="flex items-center space-x-1.5 bg-emerald-950/60 p-1 rounded-xl border border-emerald-500/30">
+                <select id="voiceSelect" class="bg-gray-900 text-emerald-200 text-xs px-2 py-1 rounded-lg border border-emerald-500/40 focus:outline-none max-w-[110px] sm:max-w-[140px] truncate" title="Select Narrator Voice">
+                    <option value="">Browser Default</option>
+                </select>
+                
+                <button id="readAloudBtn" onclick="toggleReadAloud()" class="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold flex items-center space-x-1.5 transition shadow" title="Read Entire Spread Aloud">
+                    <i class="fa-solid fa-volume-high"></i>
+                    <span id="readAloudText" class="hidden md:inline">Read Spread</span>
+                </button>
+            </div>
+
+            <!-- Table of Contents Toggle -->
+            <button id="tocBtn" onclick="toggleTOC()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs sm:text-sm font-medium flex items-center space-x-2 transition" title="Table of Contents">
+                <i class="fa-solid fa-list-ul"></i>
+                <span class="hidden lg:inline">Contents</span>
+            </button>
+
+            <!-- Theme Picker -->
+            <div class="relative group">
+                <button class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs sm:text-sm font-medium flex items-center space-x-2 transition">
+                    <i class="fa-solid fa-palette text-amber-300"></i>
+                    <span class="hidden lg:inline">Theme</span>
+                </button>
+                <div class="absolute right-0 mt-2 w-40 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-2 hidden group-hover:block z-50">
+                    <button onclick="setTheme('paper')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-[#FAF6EE] border border-gray-400"></span>
+                        <span>Classic Paper</span>
+                    </button>
+                    <button onclick="setTheme('sepia')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-[#F4ECD8] border border-amber-600"></span>
+                        <span>Warm Sepia</span>
+                    </button>
+                    <button onclick="setTheme('dark')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-[#1A1C23] border border-gray-600"></span>
+                        <span>Night Mode</span>
+                    </button>
+                    <button onclick="setTheme('parchment')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-[#F0E6D2] border border-amber-800"></span>
+                        <span>Vintage Parchment</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sound FX Toggle -->
+            <button id="soundToggleBtn" onclick="toggleSound()" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-amber-300 transition" title="Toggle Sound FX">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center p-3 sm:p-6 md:p-8 perspective-1000 relative">
+        
+        <!-- CLOSED BOOK COVER VIEW -->
+        <div id="closedBookView" onclick="openBook()" class="flex flex-col items-center justify-center transition-all duration-500 z-40 cursor-pointer">
+            <div class="closed-book-card border-2 border-amber-600/40 p-6 flex flex-col justify-between items-center text-center relative group">
+                <!-- Spine & Pages Edge -->
+                <div class="closed-book-spine"></div>
+                <div class="closed-book-pages-stack"></div>
+
+                <!-- Gold Corner Accents -->
+                <div class="absolute top-3 left-7 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
+                <div class="absolute top-3 right-3 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
+                <div class="absolute bottom-3 left-7 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
+                <div class="absolute bottom-3 right-3 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
+
+                <!-- Embossed Title & Artwork -->
+                <div class="mt-8 flex flex-col items-center">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-amber-400/60 flex items-center justify-center mb-4 bg-amber-950/40 shadow-inner group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-book-journal-whills text-3xl sm:text-4xl text-amber-400"></i>
+                    </div>
+                    <p class="font-heading text-xs uppercase tracking-widest text-amber-400/80 mb-1">Collector's Edition</p>
+                <h2 id="closedCoverTitle" class="font-heading font-black text-2xl sm:text-3xl text-gradient bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 tracking-wider mb-2">
+                    THE GOLDEN CODEX
+                </h2>
+                <div class="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2"></div>
+                <p class="font-serif italic text-xs text-amber-200/70">An Interactive Rectangular Reader</p>
+            </div>
+
+            <!-- Click Prompt Indicator -->
+            <div class="mb-4 flex flex-col items-center animate-bounce">
+                <span class="px-5 py-2 rounded-full bg-amber-500/30 border border-amber-400/60 text-amber-200 text-xs font-bold flex items-center gap-2 shadow-lg group-hover:bg-amber-500/50 transition">
+                    <i class="fa-solid fa-hand-pointer"></i> Click Cover to Open Book
+                </span>
+            </div>
+        </div>
+        <p class="mt-4 text-xs text-amber-300/80 tracking-wide font-sans font-medium">Click anywhere on the book cover to open</p>
+    </div>
+
+    <!-- OPEN BOOK SPREAD CONTAINER -->
+        <div id="bookContainer" class="book-spread w-full max-w-3xl h-[82vh] min-h-[580px] max-h-[850px] rounded-r-lg rounded-l-lg flex relative border border-black/20 overflow-hidden hidden">
+            
+            <!-- Spine shadow layer -->
+            <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-10 sm:w-12 book-spine-line z-30 pointer-events-none rounded-sm"></div>
+
+            <!-- Left Stack Edge FX -->
+            <div class="book-left-edge absolute -left-2 top-2 bottom-2 w-2 rounded-l-md pointer-events-none z-10"></div>
+            <!-- Right Stack Edge FX -->
+            <div class="book-right-edge absolute -right-2 top-2 bottom-2 w-2 rounded-r-md pointer-events-none z-10"></div>
+
+            <!-- LEFT PAGE -->
+            <div id="leftPage" class="book-page w-1/2 h-full rounded-l-xl p-3 sm:p-5 flex flex-col justify-between relative border-r border-black/10 transition-colors duration-300">
+                <!-- Top Header -->
+                <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0">
+                    <span id="leftChapterTitle" class="font-heading text-xs uppercase tracking-widest opacity-60">Chapter I</span>
+                    <button id="addBookmarkLeftBtn" onclick="toggleBookmarkCurrent(0)" class="text-xs opacity-40 hover:opacity-100 transition" title="Bookmark Left Page">
+                        <i class="fa-regular fa-bookmark"></i>
+                    </button>
+                </div>
+
+                <!-- Left Page Main Content Container -->
+                <div id="leftPageContent" class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex flex-col items-center justify-start">
+                    <!-- Text or PDF page content renders here -->
+                </div>
+
+                <!-- Bottom Footer & CIRCULAR LEFT TURN BUTTON (BOTTOM LEFT) -->
+                <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0">
+                    <!-- Circular Left Turn Button on Bottom Left -->
+                    <button id="leftCornerTurnBtn" onclick="prevPage()" class="corner-btn w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-700 hover:bg-amber-600 text-amber-100 flex items-center justify-center font-bold shadow-lg border-2 border-amber-300/40 group relative z-20" title="Turn Left / Previous Page">
+                        <i class="fa-solid fa-arrow-left text-base group-hover:-translate-x-1 transition-transform"></i>
+                        <span class="absolute -top-8 left-0 bg-black/80 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Previous Page</span>
+                    </button>
+
+                    <!-- Left Page Number -->
+                    <span id="leftPageNum" class="font-serif text-xs opacity-60 font-semibold tracking-wider">Page 1</span>
+                </div>
+            </div>
+
+            <!-- RIGHT PAGE -->
+            <div id="rightPage" class="book-page w-1/2 h-full rounded-r-xl p-3 sm:p-5 flex flex-col justify-between relative border-l border-black/5 transition-colors duration-300">
+                <!-- Top Header -->
+                <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0">
+                    <button id="addBookmarkRightBtn" onclick="toggleBookmarkCurrent(1)" class="text-xs opacity-40 hover:opacity-100 transition" title="Bookmark Right Page">
+                        <i class="fa-regular fa-bookmark"></i>
+                    </button>
+                    <span id="rightChapterTitle" class="font-heading text-xs uppercase tracking-widest opacity-60">The Golden Codex</span>
+                </div>
+
+                <!-- Right Page Main Content Container -->
+                <div id="rightPageContent" class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex flex-col items-center justify-start">
+                    <!-- Text or PDF page content renders here -->
+                </div>
+
+                <!-- Bottom Footer & CIRCULAR RIGHT TURN BUTTON (BOTTOM RIGHT) -->
+                <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0">
+                    <!-- Right Page Number -->
+                    <span id="rightPageNum" class="font-serif text-xs opacity-60 font-semibold tracking-wider">Page 2</span>
+
+                    <!-- Circular Right Turn Button on Bottom Right -->
+                    <button id="rightCornerTurnBtn" onclick="nextPage()" class="corner-btn w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-700 hover:bg-amber-600 text-amber-100 flex items-center justify-center font-bold shadow-lg border-2 border-amber-300/40 group relative z-20" title="Turn Right / Next Page">
+                        <i class="fa-solid fa-arrow-right text-base group-hover:translate-x-1 transition-transform"></i>
+                        <span class="absolute -top-8 right-0 bg-black/80 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Next Page</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- FOOTER CONTROLS -->
+    <footer class="w-full bg-black/40 backdrop-blur-md border-t border-white/10 px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-white z-30">
+        <div class="flex items-center space-x-3 text-xs sm:text-sm text-gray-300">
+            <span id="pageProgressText" class="font-medium text-amber-200">Spread 1 of 3</span>
+        </div>
+
+        <!-- Slider Navigation -->
+        <div class="flex items-center space-x-3 w-full sm:w-auto max-w-md">
+            <span class="text-xs text-gray-400">Start</span>
+            <input type="range" id="pageSlider" min="0" max="2" value="0" step="1" oninput="goToSpread(parseInt(this.value))" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500">
+            <span class="text-xs text-gray-400">End</span>
+        </div>
+
+        <!-- Jump Controls -->
+        <div class="flex items-center space-x-2">
+            <button onclick="goToSpread(0)" class="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-semibold transition">
+                <i class="fa-solid fa-backward-step"></i> First
+            </button>
+            <button onclick="goToSpread(getMaxSpreadIndex())" class="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-semibold transition">
+                Last <i class="fa-solid fa-forward-step"></i>
+            </button>
+        </div>
+    </footer>
+
+    <div id="pdfLoadingModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex flex-col items-center justify-center p-4 text-white">
+        <div class="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h3 class="font-heading text-xl font-bold text-amber-300 mb-1">Processing PDF Document...</h3>
+        <p id="pdfLoadingProgress" class="text-sm text-gray-300">Converting PDF pages into book layout...</p>
+    </div>
+
+    <!-- Table of Contents Modal -->
+    <div id="tocModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity flex justify-start" onclick="closeTOC()">
+        <div class="w-80 max-w-full bg-gray-900 text-white h-full shadow-2xl p-6 flex flex-col justify-between" onclick="event.stopPropagation()">
+            <div>
+                <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-6">
+                    <h2 class="font-heading text-xl font-bold text-amber-400 flex items-center space-x-2">
+                        <i class="fa-solid fa-book-bookmark text-base"></i>
+                        <span>Contents</span>
+                    </h2>
+                    <button onclick="closeTOC()" class="w-8 h-8 rounded-full hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div id="tocList" class="space-y-2 max-h-[70vh] overflow-y-auto pr-1"></div>
+            </div>
+            <div class="text-xs text-gray-500 border-t border-gray-800 pt-4 text-center">
+                Use bottom corner circular buttons to flip pages.
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Toast -->
+    <div id="toast" class="fixed bottom-16 left-1/2 -translate-x-1/2 bg-amber-900/90 border border-amber-500/50 text-amber-100 text-xs px-4 py-2 rounded-full shadow-2xl opacity-0 pointer-events-none transition-opacity z-50 flex items-center space-x-2">
+        <i class="fa-solid fa-circle-info"></i>
+        <span id="toastMsg">Notification</span>
+    </div>
+
+    <script>
+        // Default Sample Book Content
+        const initialPages = [
+            {
+                chapter: "Chapter I: The Arrival",
+                title: "The Scholar's Gateway",
+                content: `
+                    <div class="w-full text-left">
+                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">The Scholar's Gateway</h2>
+                        <p class="mb-2.5">The rain had begun to fall softly over the ancient spires of Oakhaven as Julian adjusted his heavy woolen cloak against the evening chill. In his hand-stitched leather travel bag lay a worn parchment map, inked in faded copper, detailing hidden paths forgotten by common cartographers for over three centuries.</p>
+                        <p class="mb-2.5">He stepped into the Grand Library's dimly lit atrium, where tall marble archways towered high above, holding tens of thousands of leather-bound folios. Every volume carried the profound weight of bygone eras, quiet wisdom waiting patiently for a reader brave enough to turn its sacred leaves.</p>
+                        <blockquote class="italic border-l-2 border-amber-700 pl-2.5 my-2.5 text-amber-900 bg-amber-900/5 py-1">"Knowledge is not merely acquired in haste; it is uncovered layer by layer, much like the gentle flip of a turning page."</blockquote>
+                        <p class="mb-2.5">Julian reached toward a dark mahogany desk where an illuminated brass lantern cast long, golden shadows across a waiting parchment manuscript.</p>
+                    </div>
+                `
+            },
+            {
+                chapter: "Chapter I: The Arrival",
+                title: "The Whispering Quill",
+                content: `
+                    <div class="w-full text-left">
+                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">The Whispering Quill</h2>
+                        <p class="mb-2.5">Sitting down on the plush velvet chair, Julian gently unclasped the antique brass bindings of the large codex before him. The paper was remarkably thick, textured, and scented faintly of dried lavender and cedarwood.</p>
+                        <p class="mb-2.5">On the margin of page twelve, a tiny inscription had been handwritten in sharp silver ink: <em>'To those who seek the golden truth, follow the twin circular seals placed at the bottom of the leaves.'</em></p>
+                        <p class="mb-2.5">He smiled knowingly, placing his fingers near the circular stamp at the bottom corner. As his fingertips grazed the edge, the parchment seemed to rustle with a quiet, musical resonance that echoed softly in his ears.</p>
+                        <p class="mb-2.5">Outside, the distant thunderstorm grew louder, but inside the sanctuary of the reading hall, only the steady, rhythmic turn of pages broke the silent night air.</p>
+                    </div>
+                `
+            },
+            {
+                chapter: "Chapter II: PDF & Navigation Guide",
+                title: "PDF Upload Feature",
+                content: `
+                    <div class="w-full text-left">
+                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">Upload Custom PDFs</h2>
+                        <p class="mb-2.5">You can upload any PDF document using the <strong>"Upload PDF"</strong> button in the top navigation bar. Every page populates in sequence without file extensions in titles.</p>
+                        <p class="mb-2.5">Enjoy clean reading with custom voice narration, theme toggles, and smooth 3D page flips.</p>
+                    </div>
+                `
+            },
+            {
+                chapter: "Chapter II: PDF & Navigation Guide",
+                title: "Circular Navigation",
+                content: `
+                    <div class="w-full text-left">
+                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">Page Turning & Gesture Controls</h2>
+                        <p class="mb-2.5"><strong>1. Circular Bottom Corner Buttons:</strong> Use the bottom-left circular button on left pages to flip back, and the bottom-right circular button on right pages to flip forward.</p>
+                        <p class="mb-2.5"><strong>2. Drag & Swipe:</strong> You can also drag horizontally across the book spread with your mouse or finger on touch screens.</p>
+                        <p class="mb-2.5"><strong>3. Sound & Themes:</strong> Toggle paper-turning audio effects and switch themes using the top toolbar.</p>
+                    </div>
+                `
+            }
+        ];
+
+        let bookPages = [...initialPages];
+        let currentSpread = 0;
+        let soundEnabled = true;
+        let savedBookmarks = [];
+        let audioCtx = null;
+        let isSpeaking = false;
+        let isBookOpen = false;
+        let availableVoices = [];
+        let isAnimating = false;
+
+        // Load available system voices for browser TTS
+        function loadVoices() {
+            if ('speechSynthesis' in window) {
+                availableVoices = window.speechSynthesis.getVoices();
+                const voiceSelect = document.getElementById('voiceSelect');
+                if (!voiceSelect) return;
+
+                voiceSelect.innerHTML = '<option value="">Browser Default</option>';
+                availableVoices.forEach((v, idx) => {
+                    const option = document.createElement('option');
+                    option.value = idx;
+                    option.textContent = `${v.name} (${v.lang})`;
+                    voiceSelect.appendChild(option);
+                });
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        function getMaxSpreadIndex() {
+            return Math.max(0, Math.ceil(bookPages.length / 2) - 1);
+        }
+
+        function openBook() {
+            if (isBookOpen) return;
+            playPageTurnSound();
+            
+            const closedView = document.getElementById('closedBookView');
+            const bookContainer = document.getElementById('bookContainer');
+            const closeBtn = document.getElementById('closeBookHeaderBtn');
+
+            closedView.classList.add('opening-animation');
+
+            setTimeout(() => {
+                closedView.classList.add('hidden');
+                closedView.classList.remove('opening-animation');
+                
+                bookContainer.classList.remove('hidden');
+                bookContainer.classList.add('flex');
+                
+                if (closeBtn) closeBtn.classList.remove('hidden');
+                isBookOpen = true;
+                renderSpread();
+                showToast("Book Opened! Use bottom circular corner buttons to flip pages.");
+            }, 400);
+        }
+
+        function closeBook() {
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                updateReadAloudBtnUI();
+            }
+
+            const closedView = document.getElementById('closedBookView');
+            const bookContainer = document.getElementById('bookContainer');
+            const closeBtn = document.getElementById('closeBookHeaderBtn');
+
+            bookContainer.classList.add('hidden');
+            bookContainer.classList.remove('flex');
+
+            closedView.classList.remove('hidden');
+            if (closeBtn) closeBtn.classList.add('hidden');
+
+            isBookOpen = false;
+        }
+
+        function syncClosedCoverTitle(titleText) {
+            const coverTitle = document.getElementById('closedCoverTitle');
+            if (coverTitle) {
+                const cleanTitle = titleText.replace(/\.pdf$/i, '');
+                coverTitle.textContent = cleanTitle.toUpperCase().slice(0, 30);
+            }
+        }
+
+        function renderSpread() {
+            const leftIdx = currentSpread * 2;
+            const rightIdx = currentSpread * 2 + 1;
+
+            const leftPage = bookPages[leftIdx];
+            const rightPage = bookPages[rightIdx];
+
+            // Render Left Page
+            const leftContentEl = document.getElementById('leftPageContent');
+            const leftChapterEl = document.getElementById('leftChapterTitle');
+            const leftNumEl = document.getElementById('leftPageNum');
+            
+            if (leftPage) {
+                leftContentEl.innerHTML = leftPage.type === 'pdf' ? `<img src="${leftPage.dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : leftPage.content;
+                leftChapterEl.textContent = leftPage.chapter || `Page ${leftIdx + 1}`;
+                leftNumEl.textContent = `Page ${leftIdx + 1}`;
+            } else {
+                leftContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
+                leftChapterEl.textContent = "";
+                leftNumEl.textContent = "";
+            }
+
+            // Render Right Page
+            const rightContentEl = document.getElementById('rightPageContent');
+            const rightChapterEl = document.getElementById('rightChapterTitle');
+            const rightNumEl = document.getElementById('rightPageNum');
+
+            if (rightPage) {
+                rightContentEl.innerHTML = rightPage.type === 'pdf' ? `<img src="${rightPage.dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : rightPage.content;
+                rightChapterEl.textContent = rightPage.chapter || `Page ${rightIdx + 1}`;
+                rightNumEl.textContent = `Page ${rightIdx + 1}`;
+            } else {
+                rightContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
+                rightChapterEl.textContent = "";
+                rightNumEl.textContent = "";
+            }
+
+            // Update Progress & Slider
+            const maxSpread = getMaxSpreadIndex();
+            document.getElementById('pageProgressText').textContent = `Spread ${currentSpread + 1} of ${maxSpread + 1}`;
+            
+            const slider = document.getElementById('pageSlider');
+            if (slider) {
+                slider.max = maxSpread;
+                slider.value = currentSpread;
+            }
+
+            // Update Bookmark Icons
+            const bmLeft = document.getElementById('addBookmarkLeftBtn');
+            const bmRight = document.getElementById('addBookmarkRightBtn');
+            if (bmLeft) bmLeft.innerHTML = savedBookmarks.includes(leftIdx) ? `<i class="fa-solid fa-bookmark text-amber-600"></i>` : `<i class="fa-regular fa-bookmark"></i>`;
+            if (bmRight) bmRight.innerHTML = savedBookmarks.includes(rightIdx) ? `<i class="fa-solid fa-bookmark text-amber-600"></i>` : `<i class="fa-regular fa-bookmark"></i>`;
+        }
+
+        function getPageInnerHTML(idx) {
+            const page = bookPages[idx];
+            if (!page) {
+                return `
+                    <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0"></div>
+                    <div class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex items-center justify-center text-gray-400 italic">End of book</div>
+                    <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0"></div>
+                `;
+            }
+            return `
+                <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0">
+                    <span class="font-heading text-xs uppercase tracking-widest opacity-60">${page.chapter || 'Page ' + (idx + 1)}</span>
+                </div>
+                <div class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex flex-col items-center justify-start">
+                    ${page.type === 'pdf' ? `<img src="${page.dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : page.content}
+                </div>
+                <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0">
+                    <span class="font-serif text-xs opacity-60 font-semibold tracking-wider">Page ${idx + 1}</span>
+                </div>
+            `;
+        }
+
+        function animatePageTurn(targetSpread, direction) {
+            if (isAnimating || targetSpread === currentSpread) return;
+            if (targetSpread < 0 || targetSpread > getMaxSpreadIndex()) return;
+
+            isAnimating = true;
+            playPageTurnSound();
+
+            const container = document.getElementById('bookContainer');
+            if (!container) {
+                currentSpread = targetSpread;
+                renderSpread();
+                isAnimating = false;
+                return;
+            }
+
+            const leftPageEl = document.getElementById('leftPage');
+            const pageBg = leftPageEl ? getComputedStyle(leftPageEl).backgroundColor : '#FAF6EE';
+            const pageColor = leftPageEl ? getComputedStyle(leftPageEl).color : '#2B2621';
+
+            const leaf = document.createElement('div');
+            leaf.className = `flip-leaf ${direction === 'next' ? 'flip-leaf-right' : 'flip-leaf-left'}`;
+
+            const frontFace = document.createElement('div');
+            frontFace.className = 'flip-face book-page p-3 sm:p-5 flex flex-col justify-between border border-black/10 rounded-r-xl';
+            frontFace.style.backgroundColor = pageBg;
+            frontFace.style.color = pageColor;
+
+            const backFace = document.createElement('div');
+            backFace.className = 'flip-face flip-face-back book-page p-3 sm:p-5 flex flex-col justify-between border border-black/10 rounded-l-xl';
+            backFace.style.backgroundColor = pageBg;
+            backFace.style.color = pageColor;
+
+            if (direction === 'next') {
+                const currentRightIdx = currentSpread * 2 + 1;
+                const targetLeftIdx = targetSpread * 2;
+
+                frontFace.innerHTML = getPageInnerHTML(currentRightIdx);
+                backFace.innerHTML = getPageInnerHTML(targetLeftIdx);
+
+                const rightContentEl = document.getElementById('rightPageContent');
+                const rightChapterEl = document.getElementById('rightChapterTitle');
+                const rightNumEl = document.getElementById('rightPageNum');
+                const targetRightIdx = targetSpread * 2 + 1;
+
+                if (bookPages[targetRightIdx]) {
+                    rightContentEl.innerHTML = bookPages[targetRightIdx].type === 'pdf' ? `<img src="${bookPages[targetRightIdx].dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : bookPages[targetRightIdx].content;
+                    rightChapterEl.textContent = bookPages[targetRightIdx].chapter || `Page ${targetRightIdx + 1}`;
+                    rightNumEl.textContent = `Page ${targetRightIdx + 1}`;
+                } else {
+                    rightContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
+                    rightChapterEl.textContent = "";
+                    rightNumEl.textContent = "";
+                }
+            } else {
+                const currentLeftIdx = currentSpread * 2;
+                const targetRightIdx = targetSpread * 2 + 1;
+
+                frontFace.innerHTML = getPageInnerHTML(currentLeftIdx);
+                backFace.innerHTML = getPageInnerHTML(targetRightIdx);
+
+                const leftContentEl = document.getElementById('leftPageContent');
+                const leftChapterEl = document.getElementById('leftChapterTitle');
+                const leftNumEl = document.getElementById('leftPageNum');
+                const targetLeftIdx = targetSpread * 2;
+
+                if (bookPages[targetLeftIdx]) {
+                    leftContentEl.innerHTML = bookPages[targetLeftIdx].type === 'pdf' ? `<img src="${bookPages[targetLeftIdx].dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : bookPages[targetLeftIdx].content;
+                    leftChapterEl.textContent = bookPages[targetLeftIdx].chapter || `Page ${targetLeftIdx + 1}`;
+                    leftNumEl.textContent = `Page ${targetLeftIdx + 1}`;
+                } else {
+                    leftContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
+                    leftChapterEl.textContent = "";
+                    leftNumEl.textContent = "";
+                }
+            }
+
+            leaf.appendChild(frontFace);
+            leaf.appendChild(backFace);
+            container.appendChild(leaf);
+
+            leaf.offsetHeight;
+
+            requestAnimationFrame(() => {
+                leaf.style.transform = direction === 'next' ? 'rotateY(-180deg)' : 'rotateY(180deg)';
+            });
+
+            setTimeout(() => {
+                currentSpread = targetSpread;
+                renderSpread();
+                if (leaf.parentNode) {
+                    leaf.parentNode.removeChild(leaf);
+                }
+                isAnimating = false;
+            }, 1000);
+        }
+
+        function nextPage() {
+            if (isAnimating) return;
+            if (currentSpread < getMaxSpreadIndex()) {
+                animatePageTurn(currentSpread + 1, 'next');
+            } else {
+                showToast("You are on the last page.");
+            }
+        }
+
+        function prevPage() {
+            if (isAnimating) return;
+            if (currentSpread > 0) {
+                animatePageTurn(currentSpread - 1, 'prev');
+            } else {
+                showToast("You are on the first page.");
+            }
+        }
+
+        function goToSpread(spreadIdx) {
+            if (isAnimating) return;
+            const target = Math.max(0, Math.min(spreadIdx, getMaxSpreadIndex()));
+            if (target > currentSpread) {
+                animatePageTurn(target, 'next');
+            } else if (target < currentSpread) {
+                animatePageTurn(target, 'prev');
+            }
+        }
+
+        function playPageTurnSound() {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const bufferSize = audioCtx.sampleRate * 0.18;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1100;
+                filter.Q.value = 1.5;
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                noise.start();
+            } catch (e) {
+                console.warn("Audio Context error:", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundToggleBtn');
+            if (btn) {
+                btn.innerHTML = soundEnabled ? `<i class="fa-solid fa-volume-high"></i>` : `<i class="fa-solid fa-volume-xmark"></i>`;
+            }
+            showToast(soundEnabled ? "Sound Effects Enabled" : "Sound Effects Muted");
+        }
+
+        function setTheme(theme) {
+            document.body.className = `theme-${theme} h-full font-sans antialiased flex flex-col justify-between select-none overflow-x-hidden`;
+            showToast(`Theme changed to ${theme}`);
+        }
+
+        function toggleReadAloud() {
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                updateReadAloudBtnUI();
+                showToast("Read Aloud Stopped.");
+                return;
+            }
+
+            const leftIdx = currentSpread * 2;
+            const rightIdx = currentSpread * 2 + 1;
+
+            let textToRead = "";
+            [leftIdx, rightIdx].forEach(idx => {
+                if (bookPages[idx] && bookPages[idx].content) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = bookPages[idx].content;
+                    textToRead += " " + (temp.textContent || temp.innerText || "");
+                }
+            });
+
+            textToRead = textToRead.trim();
+            if (!textToRead) {
+                showToast("No readable text found on this page spread.");
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.rate = 0.95;
+            utterance.pitch = 1.0;
+
+            const voiceSelect = document.getElementById('voiceSelect');
+            if (voiceSelect && voiceSelect.value !== "") {
+                const selectedIdx = parseInt(voiceSelect.value);
+                if (availableVoices[selectedIdx]) {
+                    utterance.voice = availableVoices[selectedIdx];
+                }
+            } else {
+                const containsHindi = /[\u0900-\u097F]/.test(textToRead);
+                if (containsHindi) {
+                    const hindiVoice = availableVoices.find(v => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi'));
+                    if (hindiVoice) utterance.voice = hindiVoice;
+                } else {
+                    const naturalVoice = availableVoices.find(v => v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'));
+                    if (naturalVoice) utterance.voice = naturalVoice;
+                }
+            }
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                updateReadAloudBtnUI();
+            };
+            utterance.onerror = () => {
+                isSpeaking = false;
+                updateReadAloudBtnUI();
+            };
+
+            window.speechSynthesis.speak(utterance);
+            isSpeaking = true;
+            updateReadAloudBtnUI();
+            
+            const selectedVoiceName = utterance.voice ? utterance.voice.name : "Browser Default";
+            showToast(`Reading spread aloud using: ${selectedVoiceName.slice(0, 20)}...`);
+        }
+
+        function updateReadAloudBtnUI() {
+            const btn = document.getElementById('readAloudBtn');
+            const txt = document.getElementById('readAloudText');
+            if (btn && txt) {
+                if (isSpeaking) {
+                    btn.className = "px-3 py-1 rounded-lg bg-red-700 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold flex items-center space-x-1.5 transition shadow animate-pulse";
+                    txt.textContent = "Stop Reading";
+                } else {
+                    btn.className = "px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold flex items-center space-x-1.5 transition shadow";
+                    txt.textContent = "Read Spread";
+                }
+            }
+        }
+
+        async function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const modal = document.getElementById('pdfLoadingModal');
+            const progress = document.getElementById('pdfLoadingProgress');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            try {
+                const fileArrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: fileArrayBuffer }).promise;
+
+                const newPages = [];
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    progress.textContent = `Converting page ${i} of ${pdf.numPages}...`;
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1.5 });
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    const textContent = await page.getTextContent();
+                    const textItems = textContent.items.map(item => item.str).join(' ');
+
+                    newPages.push({
+                        type: 'pdf',
+                        dataUrl: dataUrl,
+                        content: `<p>${textItems}</p>`,
+                        chapter: `PDF Page ${i}`,
+                        title: file.name.replace(/\.pdf$/i, '')
+                    });
+                }
+
+                bookPages = newPages;
+                currentSpread = 0;
+                const cleanFileName = file.name.replace(/\.pdf$/i, '');
+                document.getElementById('bookTitleDisplay').textContent = cleanFileName.slice(0, 25);
+                syncClosedCoverTitle(cleanFileName);
+                
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                
+                // Close the book cover when PDF is uploaded so user can click to open the new PDF book
+                closeBook();
+                showToast(`PDF Loaded (${pdf.numPages} Pages)! Click cover to open.`);
+            } catch (err) {
+                console.error("PDF parse error:", err);
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                showToast("Failed to process PDF file.");
+            }
+        }
+
+        function toggleTOC() {
+            const modal = document.getElementById('tocModal');
+            const list = document.getElementById('tocList');
+            if (modal.classList.contains('hidden')) {
+                list.innerHTML = "";
+                bookPages.forEach((p, idx) => {
+                    const item = document.createElement('button');
+                    item.className = "w-full text-left p-2 rounded hover:bg-gray-800 text-xs text-amber-200 border-b border-gray-800/50 flex justify-between";
+                    item.innerHTML = `<span>${p.chapter || 'Page ' + (idx + 1)} - ${p.title || ''}</span><span class="opacity-60">P. ${idx + 1}</span>`;
+                    item.onclick = () => {
+                        goToSpread(Math.floor(idx / 2));
+                        closeTOC();
+                    };
+                    list.appendChild(item);
+                });
+                modal.classList.remove('hidden');
+            } else {
+                closeTOC();
+            }
+        }
+
+        function closeTOC() {
+            document.getElementById('tocModal').classList.add('hidden');
+        }
+
+        function toggleBookmarkCurrent(offset) {
+            const pageIdx = currentSpread * 2 + offset;
+            const exists = savedBookmarks.indexOf(pageIdx);
+            if (exists > -1) {
+                savedBookmarks.splice(exists, 1);
+                showToast(`Bookmark removed from Page ${pageIdx + 1}`);
+            } else {
+                savedBookmarks.push(pageIdx);
+                showToast(`Bookmarked Page ${pageIdx + 1}`);
+            }
+            renderSpread();
+        }
+
+        function setupDragListeners() {
+            const container = document.getElementById('bookContainer');
+            let startX = 0;
+            let isDragging = false;
+
+            container.addEventListener('mousedown', (e) => {
+                if (e.target.closest('button') || e.target.closest('input')) return;
+                startX = e.clientX;
+                isDragging = true;
+            });
+
+            container.addEventListener('mouseup', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                const diff = e.clientX - startX;
+                if (diff < -50) nextPage();
+                else if (diff > 50) prevPage();
+            });
+
+            container.addEventListener('touchstart', (e) => {
+                if (e.target.closest('button') || e.target.closest('input')) return;
+                startX = e.touches[0].clientX;
+                isDragging = true;
+            });
+
+            container.addEventListener('touchend', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                const diff = e.changedTouches[0].clientX - startX;
+                if (diff < -50) nextPage();
+                else if (diff > 50) prevPage();
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            if (toast && toastMsg) {
+                toastMsg.textContent = msg;
+                toast.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'pointer-events-none');
+                }, 2800);
+            }
+        }
+
+        // Initialize Application
+        window.onload = function() {
+            setupDragListeners();
+            loadVoices();
+        };
+    </script>
+</body>
+</html>

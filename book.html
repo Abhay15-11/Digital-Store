@@ -1,1130 +1,1269 @@
 <!DOCTYPE html>
-<html lang="hi" class="h-full">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Rectangular Book - Reader with Gemini AI</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- PDF.js library for client-side PDF parsing and rendering -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1612">
+<title>The Golden Codex</title>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        serif: ['Literata', 'Georgia', 'serif'],
-                        heading: ['Cinzel', 'serif'],
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                    },
-                    colors: {
-                        book: {
-                            paper: '#FAF6EE',
-                            sepia: '#F4ECD8',
-                            darkBg: '#121316',
-                            darkPaper: '#1E2026',
-                            textDark: '#2B2621',
-                            textLight: '#E2E8F0',
-                            accent: '#8B4513',
-                            gold: '#D4AF37'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <style>
-        /* Hide all scrollbars globally */
-        * {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        ::-webkit-scrollbar {
-            display: none;
-            width: 0px;
-            height: 0px;
-            background: transparent;
-        }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
 
-        .perspective-1000 {
-            perspective: 1200px;
-        }
+<style>
+/* ============ Base & theme tokens ============ */
+*,*::before,*::after{box-sizing:border-box}
+*{scrollbar-width:none;-ms-overflow-style:none}
+::-webkit-scrollbar{display:none;width:0;height:0}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
 
-        .book-spread {
-            position: relative;
-            transform-style: preserve-3d;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-            transition: all 0.3s ease;
-            cursor: grab;
-        }
-        .book-spread:active {
-            cursor: grabbing;
-        }
+body{
+  --ui:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --serif:'Literata',Georgia,'Times New Roman',serif;
+  --display:'Cinzel',Georgia,serif;
+  --gold:#d0aa62;--gold-2:#ecd497;
+  --line:rgba(255,255,255,.1);--chrome-ink:#eee5d3;--muted:rgba(238,229,211,.62);
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --hh:60px;--fh:76px;--sp:14px;
+  --chrome:calc(var(--hh) + var(--fh) + 2*var(--sp) + 26px + env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px));
 
-        /* Spine center gradient */
-        .book-spine-line {
-            background: linear-gradient(to right, 
-                rgba(0,0,0,0.18) 0%, 
-                rgba(0,0,0,0.3) 48%, 
-                rgba(0,0,0,0.55) 50%, 
-                rgba(0,0,0,0.3) 52%, 
-                rgba(0,0,0,0.18) 100%
-            );
-        }
+  margin:0;display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+  font-family:var(--ui);color:var(--chrome-ink);
+  background:radial-gradient(ellipse 80% 62% at 50% 46%,var(--glow),var(--bg) 74%) var(--bg);
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+body,body.theme-paper{--bg:#1b1612;--glow:#43342a;--page:#faf6ee;--ink:#2a231d;--ink-soft:#7a6c5d;--rule:rgba(60,42,28,.16);--accent:#8b3a1e;--btn:#3b2a20;--btn-ink:#f4e4bd;--board:#3a1d15;--board-hi:#4b2a1f;--edge-a:#f6f0e1;--edge-b:#d8cdb4;--sh:.26;--grain:.05;--c1:#5e1d17;--c2:#2a0b09}
+body.theme-sepia{--bg:#18130e;--glow:#40301d;--page:#f3e7cc;--ink:#38270f;--ink-soft:#7c6541;--rule:rgba(80,54,20,.2);--accent:#8a5314;--btn:#4a3218;--btn-ink:#f8e6bd;--board:#3d2a16;--board-hi:#4f381f;--edge-a:#f1e2c0;--edge-b:#d3bf94;--sh:.3;--grain:.07;--c1:#5b3a17;--c2:#2a1a09}
+body.theme-dark{--bg:#090a0c;--glow:#1c2029;--page:#1b1d24;--ink:#dde2ea;--ink-soft:#8b93a3;--rule:rgba(255,255,255,.09);--accent:#d3ab60;--btn:#d3ab60;--btn-ink:#1a150c;--board:#101116;--board-hi:#1a1c23;--edge-a:#2a2d37;--edge-b:#1b1d24;--sh:.5;--grain:.03;--c1:#23262f;--c2:#0d0e12}
+body.theme-parchment{--bg:#15100b;--glow:#3a2c18;--page:#eedfc0;--ink:#2a1c0c;--ink-soft:#7a5e38;--rule:rgba(70,44,14,.22);--accent:#7a4318;--btn:#3d2810;--btn-ink:#f3dcaa;--board:#2a1c0f;--board-hi:#3a2815;--edge-a:#ead9b3;--edge-b:#c7ad79;--sh:.34;--grain:.09;--c1:#4a3016;--c2:#20130a}
+body.theme-parchment .pg{background-image:radial-gradient(rgba(120,90,40,.13) 1px,transparent 0);background-size:16px 16px}
+body.theme-midnight{--bg:#050912;--glow:#132552;--page:#141b2e;--ink:#d6dff4;--ink-soft:#8494b8;--rule:rgba(140,170,255,.13);--accent:#93b4ff;--btn:#93b4ff;--btn-ink:#08122a;--board:#0a1122;--board-hi:#121c38;--edge-a:#243052;--edge-b:#141b2e;--sh:.5;--grain:.03;--c1:#1a2b63;--c2:#080f26;--gold:#9db9ff;--gold-2:#cbdcff}
 
-        /* Corner circular navigation button styling */
-        .corner-btn {
-            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .corner-btn:hover {
-            transform: scale(1.15) translateY(-2px);
-            box-shadow: 0 8px 22px rgba(0,0,0,0.45);
-        }
-        .corner-btn:active {
-            transform: scale(0.95);
-        }
+body.compact{--hh:52px;--fh:68px;--sp:8px}
+@media (max-height:500px){body.compact{--hh:42px;--fh:54px}}
 
-        /* Page stack edge FX */
-        .book-left-edge {
-            border-left: 8px solid rgba(139, 69, 19, 0.3);
-            box-shadow: -5px 0 10px rgba(0, 0, 0, 0.15);
-        }
-        .book-right-edge {
-            border-right: 8px solid rgba(139, 69, 19, 0.3);
-            box-shadow: 5px 0 10px rgba(0, 0, 0, 0.15);
-        }
+:focus-visible{outline:2px solid var(--gold-2);outline-offset:2px}
+.pg :focus-visible{outline-color:var(--accent)}
 
-        /* Theme styles */
-        body.theme-paper {
-            background: #2D2724;
-            color: #2B2621;
-        }
-        body.theme-paper .book-page {
-            background-color: #FAF6EE;
-            color: #2D2724;
-        }
+/* ============ Header ============ */
+.hdr{flex:none;height:calc(var(--hh) + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) clamp(12px,2vw,26px) 0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;position:relative}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:14px;color:var(--gold-2);border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.14),rgba(0,0,0,.25))}
+.brand-t{min-width:0}
+.brand h1{margin:0;font:600 15px/1.25 var(--display);letter-spacing:.05em;color:var(--gold-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{margin:1px 0 0;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-mid{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mini{width:140px;height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.mini i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-2),var(--gold));transform-origin:left;transform:scaleX(var(--p,0))}
+body:not(.is-open) .hdr-mid{visibility:hidden}
 
-        body.theme-sepia {
-            background: #231E18;
-            color: #382513;
-        }
-        body.theme-sepia .book-page {
-            background-color: #F4ECD8;
-            color: #382513;
-        }
+.tools{display:flex;align-items:center;gap:2px;justify-self:end}
+.sheet-head,.sec-m,.mob{display:none}
+.tsep{width:1px;height:20px;background:var(--line);margin:0 6px}
+.ib{position:relative;flex:none;width:40px;height:40px;display:inline-grid;place-items:center;border:0;border-radius:10px;background:none;color:var(--muted);font-size:16px;transition:background .2s,color .2s,transform .15s}
+.ib:hover{background:rgba(255,255,255,.08);color:#fff}
+.ib:active{transform:scale(.92)}
+.ib .lbl{display:none}
+.ib.speaking{color:var(--gold-2);background:rgba(255,255,255,.08)}
+.ib.off{color:rgba(238,229,211,.4)}
+.ib.mini-c{width:22px;margin-left:-6px;font-size:10px}
+.ib[disabled]{opacity:.35;pointer-events:none}
+@media (hover:hover){
+  [data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;top:calc(100% + 8px);right:-4px;padding:5px 9px;border-radius:7px;background:rgba(10,8,6,.92);border:1px solid var(--line);color:#fff;font:500 11.5px/1.2 var(--ui);white-space:nowrap;pointer-events:none;z-index:80}
+}
+@media (pointer:coarse){.ib{width:44px;height:44px}}
 
-        body.theme-dark {
-            background: #0B0C0E;
-            color: #E2E8F0;
-        }
-        body.theme-dark .book-page {
-            background-color: #1A1C23;
-            color: #E2E8F0;
-        }
+.pop-wrap{position:relative;display:inline-flex;align-items:center}
+.pop{position:absolute;top:calc(100% + 10px);right:0;width:236px;padding:8px;border-radius:14px;background:rgba(24,20,17,.97);border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.55);opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .18s,transform .18s,visibility 0s .18s;z-index:60}
+.pop.open{opacity:1;visibility:visible;transform:none;transition:opacity .18s,transform .18s}
+.sec{display:block;padding:4px 8px 6px;font:600 11.5px var(--ui);color:var(--muted)}
+.opt{display:flex;align-items:center;gap:12px;width:100%;padding:9px 10px;border:0;border-radius:10px;background:none;font:500 13px var(--ui);text-align:left}
+.opt:hover{background:rgba(255,255,255,.07)}
+.opt .sw{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+.opt .ck{margin-left:auto;opacity:0;color:var(--gold-2);font-size:12px}
+.opt[aria-pressed=true] .ck{opacity:1}
+.sel{width:100%;height:40px;padding:0 10px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--line);font:500 13px var(--ui)}
+.sel option{background:#1c1713;color:#eee}
+.sound-b{font-weight:700}
 
-        body.theme-parchment {
-            background: #1C1814;
-            color: #291C0E;
-        }
-        body.theme-parchment .book-page {
-            background-color: #F0E6D2;
-            background-image: radial-gradient(#e2d5bd 1px, transparent 0);
-            background-size: 16px 16px;
-            color: #291C0E;
-        }
+/* ============ Stage ============ */
+.stage{flex:1;min-height:0;position:relative;display:grid;place-items:center;padding:var(--sp) clamp(10px,3vw,40px)}
+.chip{position:absolute;top:6px;left:50%;z-index:25;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:999px;background:rgba(14,11,9,.85);border:1px solid var(--line);font-size:12px;color:var(--chrome-ink);opacity:0;visibility:hidden;transform:translate(-50%,-8px);transition:opacity .25s,transform .25s,visibility 0s .25s;max-width:calc(100% - 24px)}
+.chip.show{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .25s,transform .25s}
+.chip span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{flex:none;height:28px;padding:0 12px;border:0;border-radius:999px;background:rgba(255,255,255,.12);font:600 12px var(--ui)}
+.chip button:hover{background:rgba(255,255,255,.2)}
+.eq{display:flex;align-items:center;gap:2px;height:14px}
+.eq i{width:2px;height:100%;background:var(--gold-2);border-radius:2px;transform-origin:center;animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}.eq i:nth-child(4){animation-delay:-.15s}
+@keyframes eq{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
 
-        /* Closed book cover styling */
-        .closed-book-card {
-            width: 320px;
-            height: 480px;
-            background: linear-gradient(135deg, #4A1512 0%, #2B0B0A 60%, #170504 100%);
-            border-radius: 8px 18px 18px 8px;
-            box-shadow: 
-                -12px 0 20px rgba(0,0,0,0.5),
-                15px 25px 45px rgba(0,0,0,0.6),
-                inset 2px 0 5px rgba(255,255,255,0.2),
-                inset -4px -4px 10px rgba(0,0,0,0.6);
-            position: relative;
-            cursor: pointer;
-            transform-style: preserve-3d;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
-        }
-        @media (min-width: 640px) {
-            .closed-book-card {
-                width: 380px;
-                height: 560px;
-            }
-        }
-        .closed-book-card:hover {
-            transform: scale(1.04) rotateY(-8deg) rotateX(4deg);
-            box-shadow: 
-                -18px 0 25px rgba(0,0,0,0.6),
-                25px 35px 55px rgba(0,0,0,0.7),
-                0 0 25px rgba(212, 175, 55, 0.3);
-        }
+/* ============ Closed cover ============ */
+#closedBookView{display:flex;flex-direction:column;align-items:center;gap:clamp(18px,3.4vh,30px);position:relative}
+#closedBookView.gone{display:none}
+.scene{position:relative;perspective:1500px;width:min(340px,74vw,calc((100dvh - var(--chrome) - 84px)*.667));aspect-ratio:2/3;animation:float 7s ease-in-out infinite;transform-origin:left center}
+.scene.opening{animation:coverOpen .55s cubic-bezier(.5,0,.25,1) forwards}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes coverOpen{to{transform:perspective(1300px) rotateY(-100deg);opacity:0}}
+.c-shadow{position:absolute;left:8%;right:-2%;bottom:-3%;height:5%;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.6),transparent 70%);animation:shadowPulse 7s ease-in-out infinite}
+@keyframes shadowPulse{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(.9);opacity:.6}}
+.cover{position:relative;display:block;width:100%;height:100%;padding:0;border:0;background:none;color:inherit;container-type:inline-size;transform:rotateX(var(--tx,3deg)) rotateY(var(--ty,-14deg));transition:transform .5s cubic-bezier(.2,.7,.2,1);will-change:transform}
+.cover.tracking{transition:transform .12s linear}
+.c-pages{position:absolute;top:1.6%;bottom:1.6%;right:-2.6%;width:3.2%;border-radius:0 3px 3px 0;background:repeating-linear-gradient(to bottom,#f2ead8 0 1px,#cfc4a9 1px 2px);box-shadow:inset 3px 0 5px rgba(0,0,0,.35)}
+.c-face{position:absolute;inset:0;border-radius:4px 9px 9px 4px;overflow:hidden;
+  background:var(--noise),radial-gradient(120% 90% at 30% 20%,rgba(255,255,255,.1),transparent 55%),linear-gradient(135deg,var(--c1),var(--c2));background-blend-mode:soft-light,normal,normal;
+  box-shadow:0 34px 60px -22px rgba(0,0,0,.8),0 14px 28px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.06),inset -3px -3px 10px rgba(0,0,0,.45)}
+.c-hinge{position:absolute;top:0;bottom:0;left:0;width:11%;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(255,255,255,.1) 28%,rgba(0,0,0,.28) 62%,rgba(255,255,255,.07) 74%,transparent)}
+.c-frame{position:absolute;inset:6% 7% 6% 15%;border:1px solid color-mix(in srgb,var(--gold) 55%,transparent);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 6%}
+.c-frame::before{content:'';position:absolute;inset:5px;border:1px solid color-mix(in srgb,var(--gold) 26%,transparent);border-radius:2px;pointer-events:none}
+.c-emblem{width:19cqw;height:19cqw;border-radius:50%;display:grid;place-items:center;font-size:8cqw;color:var(--gold-2);border:1px solid color-mix(in srgb,var(--gold) 60%,transparent);background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.12),rgba(0,0,0,.3));box-shadow:inset 0 2px 6px rgba(0,0,0,.5);margin-bottom:6cqw}
+.c-ed{font:italic 400 3.9cqw var(--serif);color:color-mix(in srgb,var(--gold-2) 75%,transparent);margin-bottom:3.4cqw}
+.c-title{margin:0;max-width:100%;overflow-wrap:anywhere;font:700 9.6cqw/1.22 var(--display);letter-spacing:.07em;background:linear-gradient(180deg,var(--gold-2),var(--gold) 46%,color-mix(in srgb,var(--gold) 55%,#000) 56%,var(--gold-2));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 1px 0 rgba(0,0,0,.55)) drop-shadow(0 -1px 0 rgba(255,255,255,.1))}
+.c-rule{width:34%;height:1px;margin:4.6cqw 0 3.6cqw;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.c-sub{font:italic 400 3.9cqw var(--serif);color:color-mix(in srgb,var(--gold-2) 62%,transparent)}
+.c-sheen{position:absolute;inset:0;pointer-events:none;background:linear-gradient(112deg,transparent 34%,rgba(255,255,255,.13) 47%,rgba(255,255,255,.03) 54%,transparent 64%);background-size:260% 100%;background-position:120% 0;animation:sheen 9s ease-in-out infinite}
+@keyframes sheen{0%,55%{background-position:120% 0}100%{background-position:-30% 0}}
+.hint{display:flex;align-items:center;gap:10px;font:500 13px var(--ui);color:var(--muted);animation:hintPulse 3.2s ease-in-out infinite}
+.hint i{color:var(--gold-2)}
+.hint .h-touch{display:none}
+@media (pointer:coarse){.hint .h-touch{display:inline}.hint .h-mouse{display:none}}
+@keyframes hintPulse{0%,100%{opacity:.55}50%{opacity:1}}
 
-        .closed-book-spine {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 24px;
-            background: linear-gradient(to right, #170504, #5C1D18 50%, #2B0B0A);
-            border-radius: 8px 0 0 8px;
-            box-shadow: inset -2px 0 5px rgba(0,0,0,0.5);
-        }
+/* ============ Open book ============ */
+.book{--r:1.42;display:none;position:relative;width:min(100%,calc((100dvh - var(--chrome))*var(--r)),1300px);aspect-ratio:var(--r);container-type:inline-size;perspective:2600px;touch-action:pan-y;cursor:grab}
+.book.show{display:block}
+.book:active{cursor:grabbing}
+.book.enter{animation:bookIn .55s cubic-bezier(.2,.7,.2,1)}
+@keyframes bookIn{from{opacity:0;transform:scale(.95) translateY(10px)}}
+.boards{position:absolute;inset:-1.1cqw -1.3cqw -1.5cqw;border-radius:7px;background:var(--noise),linear-gradient(180deg,var(--board-hi),var(--board));background-blend-mode:soft-light,normal;box-shadow:0 44px 80px -24px rgba(0,0,0,.8),0 18px 32px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);z-index:-2}
+.edge{position:absolute;top:1%;bottom:1%;width:1cqw;z-index:-1;background:repeating-linear-gradient(to right,var(--edge-a) 0 1px,var(--edge-b) 1px 2px)}
+.edge-l{left:-1cqw;border-radius:3px 0 0 3px}.edge-r{right:-1cqw;border-radius:0 3px 3px 0}
 
-        .closed-book-pages-stack {
-            position: absolute;
-            right: -10px;
-            top: 8px;
-            bottom: 8px;
-            width: 12px;
-            background: repeating-linear-gradient(to bottom, #FAF6EE 0px, #EAE2D0 2px, #FAF6EE 4px);
-            border-radius: 0 4px 4px 0;
-            box-shadow: 3px 0 6px rgba(0,0,0,0.4);
-        }
+.pg{position:relative;display:flex;flex-direction:column;overflow:hidden;background-color:var(--page);color:var(--ink);--px:4.4cqw;padding:3.9cqw var(--px) 2.6cqw;font-size:clamp(14px,2.05cqw,19px)}
+.pg::before,.pg::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3}
+.pg::after{background:var(--noise);opacity:var(--grain)}
+.pg.l::before{background:linear-gradient(to left,rgba(0,0,0,calc(var(--sh)*1.1)),rgba(0,0,0,calc(var(--sh)*.3)) 7%,transparent 22%),linear-gradient(to right,rgba(255,255,255,.16),transparent 2%)}
+.pg.r::before,.pg.s::before{background:linear-gradient(to right,rgba(0,0,0,calc(var(--sh)*1.1)),rgba(0,0,0,calc(var(--sh)*.3)) 7%,transparent 22%),linear-gradient(to left,rgba(255,255,255,.16),transparent 2%)}
+.pg.l{padding-right:calc(var(--px) + 2.6cqw);border-radius:6px 2px 2px 6px}
+.pg.r,.pg.s{padding-left:calc(var(--px) + 2.6cqw);border-radius:2px 6px 6px 2px}
+#leftPage,#rightPage{position:absolute;top:0;bottom:0;width:50%}
+#leftPage{left:0}#rightPage{right:0}
+.spine{position:absolute;top:0;bottom:0;left:50%;width:7cqw;transform:translateX(-50%);z-index:6;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(0,0,0,calc(var(--sh)*.5)) 38%,rgba(0,0,0,calc(var(--sh)*1.7)) 50%,rgba(0,0,0,calc(var(--sh)*.5)) 62%,transparent)}
+.spine::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:rgba(255,255,255,.1)}
 
-        .opening-animation {
-            animation: unfoldBook 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
+.book.single{aspect-ratio:auto;height:calc(100dvh - var(--chrome));width:min(100%,560px,calc((100dvh - var(--chrome))*.78))}
+@media (max-height:500px){.book.single{width:min(100%,720px)}}
+.book.single .boards{inset:-1.5cqw -1.7cqw -2.1cqw}
+.book.single .edge{width:1.4cqw}.book.single .edge-l{left:-1.4cqw}.book.single .edge-r{right:-1.4cqw}
+.book.single #leftPage{display:none}
+.book.single #rightPage{width:100%}
+.book.single .pg{--px:7cqw;padding-top:6.4cqw;padding-bottom:4.6cqw;font-size:clamp(16px,4.3cqw,19px)}
+.book.single .spine{left:0;width:9cqw;transform:none;background:linear-gradient(90deg,rgba(0,0,0,calc(var(--sh)*1.4)),rgba(0,0,0,calc(var(--sh)*.5)) 45%,transparent)}
+.book.single .spine::after{left:3.2cqw}
+@media (max-height:500px){.book.single .pg{font-size:clamp(15px,2.6cqw,18px);--px:4cqw;padding-top:3.4cqw;padding-bottom:2.4cqw}}
 
-        @keyframes unfoldBook {
-            0% {
-                transform: scale(1) rotateY(0deg);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(1.08) rotateY(-90deg);
-                opacity: 0.5;
-            }
-            100% {
-                transform: scale(1) rotateY(-180deg);
-                opacity: 0;
-            }
-        }
+.pg-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:.6em;min-height:2.2em;padding-bottom:.4em;border-bottom:1px solid var(--rule);font:italic 400 .78em var(--serif);color:var(--ink-soft);position:relative;z-index:1}
+.pg.r .pg-head{flex-direction:row-reverse}
+.pg-head .ch{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.bm{flex:none;width:32px;height:32px;display:grid;place-items:center;margin:-4px;border:0;border-radius:8px;background:none;color:var(--ink-soft);opacity:.7;font-size:.95rem;transition:opacity .2s,color .2s,transform .15s}
+.bm:hover{opacity:1;transform:translateY(-1px)}
+.bm.on{color:var(--accent);opacity:1}
+.bm.pulse i{animation:bmPop .55s cubic-bezier(.2,.8,.3,1.4)}
+@keyframes bmPop{0%{transform:scale(.6) translateY(-4px)}55%{transform:scale(1.4)}100%{transform:none}}
 
-        /* Generated Illustration styling */
-        .page-illustration {
-            width: 100%;
-            max-height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 1px solid rgba(139, 69, 19, 0.2);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            margin: 12px 0;
-        }
+.pg-body{flex:1;min-height:0;position:relative;z-index:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:1.1em 0 .7em;font-family:var(--serif);line-height:1.72;font-optical-sizing:auto}
+.pg-body h2{margin:0 0 .75em;font:600 1.32em/1.28 var(--display);letter-spacing:.02em;color:var(--accent)}
+.pg-body p{margin:0 0 .9em;text-wrap:pretty;hyphens:auto}
+.pg-body h2+p::first-letter{float:left;font:600 3.1em/.8 var(--display);padding:.06em .1em 0 0;color:var(--accent)}
+.pg-body blockquote{margin:1.2em 0;padding:.1em 0 .1em 1em;border-left:2px solid var(--accent);font-style:italic;color:var(--ink-soft)}
+.pg-body strong{font-weight:600}
+.pg-body.end{display:grid;place-items:center;font-style:italic;color:var(--ink-soft)}
+.pg-body.pdf{padding:.6em 0;overflow:hidden}
+.pg-body.pdf img{position:absolute;inset:.6em 0;width:100%;height:calc(100% - 1.2em);object-fit:contain;-webkit-user-drag:none;user-select:none}
 
-        /* 1-Second 3D Page Turn Animation Styles */
-        .flip-leaf {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 50%;
-            height: 100%;
-            z-index: 40;
-            transform-style: preserve-3d;
-            transition: transform 1s cubic-bezier(0.42, 0, 0.58, 1);
-            pointer-events: none;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-        }
-        .flip-leaf-right {
-            right: 0;
-            transform-origin: left center;
-        }
-        .flip-leaf-left {
-            left: 0;
-            transform-origin: right center;
-        }
-        .flip-face {
-            position: absolute;
-            inset: 0;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            overflow: hidden;
-        }
-        .flip-face-back {
-            transform: rotateY(180deg);
-        }
-    </style>
+.pg-foot{flex:none;display:flex;align-items:center;justify-content:space-between;min-height:44px;padding-top:.5em;border-top:1px solid var(--rule);position:relative;z-index:4}
+.pg.s .pg-foot{justify-content:center}
+.pnum{font:italic 400 .9em var(--serif);color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.turn,.navc{flex:none;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--btn);color:var(--btn-ink);font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 14px rgba(0,0,0,.28),0 1px 3px rgba(0,0,0,.35);transition:transform .2s cubic-bezier(.2,.8,.3,1.2),box-shadow .2s,opacity .2s}
+.turn:hover,.navc:hover{transform:translateY(-1px) scale(1.07);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 10px 20px rgba(0,0,0,.33),0 1px 3px rgba(0,0,0,.35)}
+.turn:active,.navc:active{transform:scale(.92)}
+.turn[disabled],.navc[disabled]{opacity:.28;pointer-events:none;box-shadow:none}
+.turn-sp{width:44px;height:44px}
+.turn i{transition:transform .2s}
+.turn:hover i.fa-arrow-left{transform:translateX(-2px)}.turn:hover i.fa-arrow-right{transform:translateX(2px)}
+
+/* Page-turn leaf */
+.leaf{position:absolute;top:0;height:100%;width:50%;z-index:20;transform-style:preserve-3d;pointer-events:none;will-change:transform;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.leaf-r{right:0;transform-origin:left center;border-radius:2px 6px 6px 2px}
+.leaf-l{left:0;transform-origin:right center;border-radius:6px 2px 2px 6px}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.face.back{transform:rotateY(180deg)}
+.shade{position:absolute;inset:0;z-index:5;opacity:0;pointer-events:none;background:linear-gradient(to right,rgba(0,0,0,.55),rgba(0,0,0,.05) 80%)}
+.face.l .shade{background:linear-gradient(to left,rgba(0,0,0,.55),rgba(0,0,0,.05) 80%)}
+
+/* ============ Footer / progress ============ */
+.foot{flex:none;height:calc(var(--fh) + env(safe-area-inset-bottom,0px));padding:0 clamp(12px,3vw,32px) env(safe-area-inset-bottom,0px);display:flex;align-items:center;justify-content:center;position:relative}
+body:not(.is-open) .foot{visibility:hidden}
+.foot-in{display:flex;align-items:center;gap:10px;width:min(100%,780px)}
+.prog{flex:1;min-width:0}
+.prog-meta{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.prog-meta b{font-weight:600;color:var(--chrome-ink)}
+.track{position:relative;height:28px;cursor:pointer;touch-action:none;--p:0}
+.rail{position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,var(--gold-2),var(--gold));transform-origin:left;transform:scaleX(var(--p));transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+.thumb{position:absolute;top:50%;left:calc(var(--p)*100%);width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--gold-2);box-shadow:0 0 0 4px color-mix(in srgb,var(--gold) 22%,transparent),0 2px 6px rgba(0,0,0,.5);transition:left .35s cubic-bezier(.2,.7,.2,1),box-shadow .2s,transform .2s}
+.track:hover .thumb{transform:scale(1.12)}
+.track.dragging .fill,.track.dragging .thumb{transition:none}
+.track.dragging .thumb{transform:scale(1.25);box-shadow:0 0 0 7px color-mix(in srgb,var(--gold) 26%,transparent),0 2px 6px rgba(0,0,0,.5)}
+.track:focus-visible{outline:none}
+.track:focus-visible .thumb{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--gold-2)}
+
+/* ============ Drawer (contents & bookmarks) ============ */
+.layer{position:fixed;inset:0;z-index:70;visibility:hidden;transition:visibility 0s .35s}
+.layer.open{visibility:visible;transition:none}
+.layer-bg{position:absolute;inset:0;background:rgba(5,4,3,.6);opacity:0;transition:opacity .3s}
+.layer.open .layer-bg{opacity:1}
+.drawer{position:absolute;top:0;bottom:0;left:0;width:min(400px,92vw);display:flex;flex-direction:column;background:#17130f;border-right:1px solid var(--line);box-shadow:24px 0 60px rgba(0,0,0,.5);transform:translateX(-102%);transition:transform .35s cubic-bezier(.2,.8,.2,1);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.layer.open .drawer{transform:none}
+.dr-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 8px 22px}
+.dr-head h2{margin:0;font:600 17px var(--display);letter-spacing:.05em;color:var(--gold-2)}
+.tabs{display:flex;gap:4px;margin:6px 18px 8px;padding:3px;border-radius:11px;background:rgba(255,255,255,.05)}
+.tab{flex:1;height:34px;border:0;border-radius:8px;background:none;font:600 12.5px var(--ui);color:var(--muted)}
+.tab[aria-selected=true]{background:rgba(255,255,255,.1);color:#fff}
+.dr-list{flex:1;min-height:0;overflow-y:auto;list-style:none;margin:0;padding:6px 12px 20px;scroll-behavior:smooth;overscroll-behavior:contain}
+.toc-item,.bm-row{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px 11px 16px;border:0;border-radius:11px;background:none;text-align:left;transition:background .2s}
+.toc-item:hover,.bm-row:hover{background:rgba(255,255,255,.06)}
+.toc-item::before{content:'';position:absolute;left:4px;top:24%;bottom:24%;width:3px;border-radius:3px;background:var(--gold-2);transform:scaleY(0);transition:transform .25s}
+.toc-item.active{background:rgba(255,255,255,.07)}
+.toc-item.active::before{transform:none}
+.t-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.t-sub{font:italic 400 12px var(--serif);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-main{font:500 14px/1.35 var(--ui);color:var(--chrome-ink);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.t-pg{flex:none;font:400 12px var(--serif);font-style:italic;color:var(--muted);font-variant-numeric:tabular-nums}
+.bm-row{padding-right:6px}
+.bm-go{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:none;text-align:left;padding:0}
+.bm-go>i{color:var(--gold-2)}
+.bm-del{width:36px;height:36px;border:0;border-radius:9px;background:none;color:var(--muted)}
+.bm-del:hover{background:rgba(255,255,255,.1);color:#fff}
+.empty{padding:28px 22px;text-align:center;font:italic 400 14px/1.6 var(--serif);color:var(--muted)}
+.count{margin-left:6px;font-size:11px;opacity:.7}
+
+/* ============ PDF modal ============ */
+.modal{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(8,6,4,.78);backdrop-filter:blur(6px)}
+.modal.open{display:flex}
+.m-card{width:min(340px,100%);padding:30px 24px 26px;border-radius:20px;background:#191410;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6);text-align:center}
+.ring{position:relative;width:112px;height:112px;margin:0 auto 18px}
+.ring svg{position:absolute;inset:0;width:100%;height:100%}
+.ring .spin{transform-origin:50% 50%;animation:spin 6s linear infinite}
+.ring .arc{transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .25s ease-out}
+.ring .pct{position:absolute;inset:0;display:grid;place-items:center;font:600 22px var(--ui);font-variant-numeric:tabular-nums;color:var(--gold-2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.m-card h3{margin:0 0 6px;font:600 17px var(--display);letter-spacing:.04em;color:var(--gold-2)}
+.m-card p{margin:0;font-size:13.5px;color:var(--muted)}
+.m-card .fn{margin-top:4px;font-size:12px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ============ Toast ============ */
+.toast{position:fixed;left:50%;bottom:calc(var(--fh) + env(safe-area-inset-bottom,0px) + 14px);z-index:95;display:flex;align-items:center;gap:9px;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:999px;background:rgba(14,11,9,.92);border:1px solid var(--line);box-shadow:0 14px 36px rgba(0,0,0,.5);font-size:13px;color:var(--chrome-ink);opacity:0;pointer-events:none;transform:translate(-50%,8px);transition:opacity .25s,transform .25s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast i{color:var(--gold-2)}
+
+/* ============ Compact (mobile / phone landscape) ============ */
+body.compact .hdr{display:flex;justify-content:space-between;gap:8px;padding-left:6px;padding-right:6px}
+body.compact .mob{display:inline-grid}
+body.compact .dsk,body.compact .hdr-mid,body.compact .logo,body.compact .status{display:none}
+body.compact .brand{flex:1;justify-content:center}
+body.compact .brand h1{font-size:14px;text-align:center}
+body.compact .prog-meta{font-size:12px}
+@media (max-height:500px){body.compact .prog-meta{display:none}}
+body.compact .foot{padding-left:12px;padding-right:12px}
+body.compact .navc{width:46px;height:46px}
+body.compact .chip{top:2px}
+
+/* tools become a right-hand options sheet */
+body.compact .tools{position:fixed;top:0;bottom:0;right:0;z-index:72;width:min(320px,88vw);flex-direction:column;align-items:stretch;gap:2px;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px calc(env(safe-area-inset-bottom,0px) + 12px);background:#17130f;border-left:1px solid var(--line);box-shadow:-24px 0 60px rgba(0,0,0,.5);overflow-y:auto;transform:translateX(102%);visibility:hidden;transition:transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s .32s}
+body.sheet-open .tools{transform:none;visibility:visible;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+body.compact .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:8px 6px 10px 10px;font:600 16px var(--display);letter-spacing:.05em;color:var(--gold-2)}
+body.compact .tools>.ib,body.compact .tgroup>.ib:not(.mini-c){width:100%;height:50px;padding:0 12px;justify-content:start;grid-auto-flow:column;grid-template-columns:26px 1fr;gap:10px;text-align:left;font-size:16px;border-radius:12px;color:var(--chrome-ink)}
+body.compact .ib .lbl{display:inline;font:500 14.5px var(--ui)}
+body.compact .tsep{display:none}
+body.compact .tgroup{display:block}
+body.compact .pop-wrap,body.compact .tgroup{display:block;position:static}
+body.compact .pop{position:static;width:auto;padding:0 0 6px;background:none;border:0;box-shadow:none;opacity:1;visibility:visible;transform:none;transition:none}
+body.compact #themeBtn,body.compact #voiceBtn,body.compact #tocBtn{display:none}
+body.compact .sec-m{display:block}
+body.compact .pop .sec{padding-top:12px}
+body.compact .opt{padding:12px}
+body.compact .sel{height:46px;font-size:15px}
+body.compact .sheet-scrim{position:fixed;inset:0;z-index:71;background:rgba(5,4,3,.6);opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s .3s}
+body.compact.sheet-open .sheet-scrim{opacity:1;visibility:visible;transition:opacity .3s}
+body.compact .toast{bottom:calc(var(--fh) + env(safe-area-inset-bottom,0px) + 10px)}
+.sheet-scrim{display:none}
+body.compact .sheet-scrim{display:block}
+body.compact .drawer{width:min(420px,92vw)}
+
+@media (max-width:1000px){.hdr-mid{display:none}.hdr{grid-template-columns:1fr auto}}
+
+/* ============ Reduced motion ============ */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important;scroll-behavior:auto!important}
+  .cover{transform:rotateY(-10deg)}
+}
+
+/* ============ Built-in icons (no external icon font needed) ============ */
+i[class*='fa-']{display:inline-block;flex:none;width:1em;height:1em;vertical-align:-.125em;font-style:normal;background-color:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+.fa-book-open{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E")}
+.fa-bars{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16 M4 12h16 M4 18h16'/%3E%3C/svg%3E")}
+.fa-ellipsis{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h.01 M12 12h.01 M19 12h.01' stroke-width='3.2'/%3E%3C/svg%3E")}
+.fa-xmark{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18 M6 6l12 12'/%3E%3C/svg%3E")}
+.fa-file-arrow-up{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M12 18v-6 M9 15l3-3 3 3'/%3E%3C/svg%3E")}
+.fa-list-ul{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01' stroke-width='3'/%3E%3C/svg%3E")}
+.fa-palette{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22a10 10 0 1 1 10-10c0 3-2 4-4 4h-2a2 2 0 0 0-1.5 3.3c.7.8.3 2.7-2.5 2.7z M7.5 10.5h.01 M12 7.5h.01 M16.5 10.5h.01'/%3E%3C/svg%3E")}
+.fa-check{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")}
+.fa-headphones{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3'/%3E%3C/svg%3E")}
+.fa-chevron-down{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")}
+.fa-chevron-left{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E")}
+.fa-chevron-right{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E")}
+.fa-volume-high{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 5 6 9H2v6h4l5 4z M15.5 8.5a5 5 0 0 1 0 7 M19 5a10 10 0 0 1 0 14'/%3E%3C/svg%3E")}
+.fa-volume-xmark{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 5 6 9H2v6h4l5 4z M22 9l-6 6 M16 9l6 6'/%3E%3C/svg%3E")}
+.fa-book{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E")}
+.fa-hand-pointer{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15 M18 11v-1a2 2 0 0 0-2-2 2 2 0 0 0-2 2 M14 10V9a2 2 0 0 0-2-2 2 2 0 0 0-2 2v1 M10 9.5V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v10'/%3E%3C/svg%3E")}
+.fa-backward-step{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 5v14 M19 5 9 12l10 7z'/%3E%3C/svg%3E")}
+.fa-forward-step{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 5v14 M5 5l10 7-10 7z'/%3E%3C/svg%3E")}
+.fa-arrow-left{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5 M12 19l-7-7 7-7'/%3E%3C/svg%3E")}
+.fa-arrow-right{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14 M12 5l7 7-7 7'/%3E%3C/svg%3E")}
+.fa-bookmark{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z'/%3E%3C/svg%3E")}
+.fa-circle-info{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4 M12 8h.01'/%3E%3C/svg%3E")}
+.fa-solid.fa-bookmark{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z'/%3E%3C/svg%3E")}
+.fa-stop{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Crect x='6' y='6' width='12' height='12' rx='2'/%3E%3C/svg%3E")}
+/* mobile-only / desktop-only buttons: make sure they really hide */
+body:not(.compact) .mob{display:none}
+</style>
 </head>
 
-<body class="theme-paper h-full font-sans antialiased flex flex-col justify-between select-none overflow-x-hidden">
+<body class="theme-paper">
 
-    <!-- HEADER TOOLBAR -->
-    <header class="w-full bg-black/40 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between z-30 text-white flex-wrap gap-2">
-        <div class="flex items-center space-x-3">
-            <div class="w-9 h-9 rounded-full bg-amber-600 flex items-center justify-center font-heading text-xl shadow-lg">
-                <i class="fa-solid fa-book-open text-amber-100"></i>
-            </div>
-            <div>
-                <h1 id="bookTitleDisplay" class="font-heading font-bold text-base sm:text-lg leading-tight tracking-wide text-amber-200">The Golden Codex</h1>
-                <p class="text-xs text-gray-300">Interactive Rectangular Reader & Gemini AI Studio</p>
-            </div>
+<!-- ============ HEADER ============ -->
+<header class="hdr">
+    <button class="ib mob" id="menuBtn" onclick="toggleTOC()" aria-label="Open contents" aria-expanded="false" aria-controls="tocDrawer"><i class="fa-solid fa-bars"></i></button>
+
+    <div class="brand">
+        <div class="logo" aria-hidden="true"><i class="fa-solid fa-book-open"></i></div>
+        <div class="brand-t">
+            <h1 id="bookTitleDisplay">The Golden Codex</h1>
+            <p class="status" id="readStatus" aria-live="polite">Closed</p>
+        </div>
+    </div>
+
+    <div class="hdr-mid" id="hdrMid" aria-hidden="true"><div class="mini"><i id="hdrFill"></i></div><span id="hdrPct">0%</span></div>
+
+    <button class="ib mob" id="moreBtn" onclick="toggleSheet()" aria-label="More options" aria-expanded="false" aria-controls="toolbar"><i class="fa-solid fa-ellipsis"></i></button>
+
+    <div class="tools" id="toolbar" role="toolbar" aria-label="Reader tools">
+        <div class="sheet-head"><span>Reader options</span><button class="ib" onclick="closeSheet()" aria-label="Close options"><i class="fa-solid fa-xmark"></i></button></div>
+
+        <button class="ib" id="uploadBtn" onclick="document.getElementById('pdfFileInput').click()" data-tip="Upload PDF" aria-label="Upload PDF"><i class="fa-solid fa-file-arrow-up"></i><span class="lbl">Upload PDF</span></button>
+        <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" hidden onchange="handlePdfUpload(event)">
+
+        <button class="ib" id="tocBtn" onclick="toggleTOC()" data-tip="Contents" aria-label="Contents" aria-expanded="false" aria-controls="tocDrawer"><i class="fa-solid fa-list-ul"></i><span class="lbl">Contents</span></button>
+
+        <div class="pop-wrap">
+            <button class="ib" id="themeBtn" onclick="togglePop('themePop','themeBtn')" data-tip="Theme" aria-label="Theme" aria-expanded="false" aria-controls="themePop" aria-haspopup="true"><i class="fa-solid fa-palette"></i></button>
+            <div class="pop" id="themePop"><span class="sec sec-m">Theme</span><div id="themeList"></div></div>
         </div>
 
-        <div class="flex items-center space-x-2 sm:space-x-3 flex-wrap gap-y-2">
-            <!-- Close Book Header Button -->
-            <button id="closeBookHeaderBtn" onclick="closeBook()" class="px-3 py-1.5 rounded-lg bg-amber-800/80 hover:bg-amber-700 text-amber-100 text-xs sm:text-sm font-semibold flex items-center space-x-2 transition shadow border border-amber-500/30 hidden" title="Close Book Cover">
-                <i class="fa-solid fa-book"></i>
-                <span>Close Book</span>
-            </button>
+        <div class="tsep" aria-hidden="true"></div>
 
-            <!-- PDF Upload Button -->
-            <label class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs sm:text-sm font-semibold flex items-center space-x-2 cursor-pointer shadow-md transition">
-                <i class="fa-solid fa-file-pdf text-amber-100"></i>
-                <span>Upload PDF</span>
-                <input type="file" id="pdfFileInput" accept="application/pdf" class="hidden" onchange="handlePdfUpload(event)">
-            </label>
-
-            <!-- Speech & Voice Controls -->
-            <div class="flex items-center space-x-1.5 bg-emerald-950/60 p-1 rounded-xl border border-emerald-500/30">
-                <select id="voiceSelect" class="bg-gray-900 text-emerald-200 text-xs px-2 py-1 rounded-lg border border-emerald-500/40 focus:outline-none max-w-[110px] sm:max-w-[140px] truncate" title="Select Narrator Voice">
-                    <option value="">Browser Default</option>
-                </select>
-                
-                <button id="readAloudBtn" onclick="toggleReadAloud()" class="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold flex items-center space-x-1.5 transition shadow" title="Read Entire Spread Aloud">
-                    <i class="fa-solid fa-volume-high"></i>
-                    <span id="readAloudText" class="hidden md:inline">Read Spread</span>
-                </button>
-            </div>
-
-            <!-- Table of Contents Toggle -->
-            <button id="tocBtn" onclick="toggleTOC()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs sm:text-sm font-medium flex items-center space-x-2 transition" title="Table of Contents">
-                <i class="fa-solid fa-list-ul"></i>
-                <span class="hidden lg:inline">Contents</span>
-            </button>
-
-            <!-- Theme Picker -->
-            <div class="relative group">
-                <button class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs sm:text-sm font-medium flex items-center space-x-2 transition">
-                    <i class="fa-solid fa-palette text-amber-300"></i>
-                    <span class="hidden lg:inline">Theme</span>
-                </button>
-                <div class="absolute right-0 mt-2 w-40 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-2 hidden group-hover:block z-50">
-                    <button onclick="setTheme('paper')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-full bg-[#FAF6EE] border border-gray-400"></span>
-                        <span>Classic Paper</span>
-                    </button>
-                    <button onclick="setTheme('sepia')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-full bg-[#F4ECD8] border border-amber-600"></span>
-                        <span>Warm Sepia</span>
-                    </button>
-                    <button onclick="setTheme('dark')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-full bg-[#1A1C23] border border-gray-600"></span>
-                        <span>Night Mode</span>
-                    </button>
-                    <button onclick="setTheme('parchment')" class="w-full px-4 py-2 text-left text-xs text-amber-100 hover:bg-amber-900/50 flex items-center space-x-2">
-                        <span class="w-3 h-3 rounded-full bg-[#F0E6D2] border border-amber-800"></span>
-                        <span>Vintage Parchment</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Sound FX Toggle -->
-            <button id="soundToggleBtn" onclick="toggleSound()" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-amber-300 transition" title="Toggle Sound FX">
-                <i class="fa-solid fa-volume-high"></i>
-            </button>
+        <div class="tgroup pop-wrap">
+            <button class="ib" id="readAloudBtn" onclick="toggleReadAloud()" data-tip="Read aloud" aria-label="Read aloud" aria-pressed="false"><i class="fa-solid fa-headphones"></i><span class="lbl" id="readAloudText">Read aloud</span></button>
+            <button class="ib mini-c" id="voiceBtn" onclick="togglePop('voicePop','voiceBtn')" data-tip="Choose voice" aria-label="Choose narrator voice" aria-expanded="false" aria-controls="voicePop" aria-haspopup="true"><i class="fa-solid fa-chevron-down"></i></button>
+            <div class="pop" id="voicePop"><label class="sec" for="voiceSelect">Narrator voice</label><select id="voiceSelect" class="sel" aria-label="Narrator voice"><option value="">Browser Default</option></select></div>
         </div>
-    </header>
 
-    <main class="flex-1 flex items-center justify-center p-3 sm:p-6 md:p-8 perspective-1000 relative">
-        
-        <!-- CLOSED BOOK COVER VIEW -->
-        <div id="closedBookView" onclick="openBook()" class="flex flex-col items-center justify-center transition-all duration-500 z-40 cursor-pointer">
-            <div class="closed-book-card border-2 border-amber-600/40 p-6 flex flex-col justify-between items-center text-center relative group">
-                <!-- Spine & Pages Edge -->
-                <div class="closed-book-spine"></div>
-                <div class="closed-book-pages-stack"></div>
+        <button class="ib" id="soundToggleBtn" onclick="toggleSound()" data-tip="Sound on" aria-label="Page-turn sound" aria-pressed="true"><i class="fa-solid fa-volume-high" id="soundIcon"></i><span class="lbl">Sound <b class="sound-b" id="soundState">On</b></span></button>
 
-                <!-- Gold Corner Accents -->
-                <div class="absolute top-3 left-7 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
-                <div class="absolute top-3 right-3 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
-                <div class="absolute bottom-3 left-7 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
-                <div class="absolute bottom-3 right-3 text-amber-500/60 text-lg"><i class="fa-solid fa-crown"></i></div>
+        <button class="ib" id="closeBookHeaderBtn" onclick="closeBook()" data-tip="Close book" aria-label="Close book" hidden><i class="fa-solid fa-book"></i><span class="lbl">Close book</span></button>
+    </div>
+</header>
+<div class="sheet-scrim" id="sheetScrim" onclick="closeSheet()"></div>
 
-                <!-- Embossed Title & Artwork -->
-                <div class="mt-8 flex flex-col items-center">
-                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-amber-400/60 flex items-center justify-center mb-4 bg-amber-950/40 shadow-inner group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-book-journal-whills text-3xl sm:text-4xl text-amber-400"></i>
-                    </div>
-                    <p class="font-heading text-xs uppercase tracking-widest text-amber-400/80 mb-1">Collector's Edition</p>
-                <h2 id="closedCoverTitle" class="font-heading font-black text-2xl sm:text-3xl text-gradient bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 tracking-wider mb-2">
-                    THE GOLDEN CODEX
-                </h2>
-                <div class="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent my-2"></div>
-                <p class="font-serif italic text-xs text-amber-200/70">An Interactive Rectangular Reader</p>
-            </div>
+<!-- ============ STAGE ============ -->
+<main class="stage" id="stage">
+    <div class="chip" id="speakChip" role="status"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="t" id="speakTxt">Reading aloud</span><button onclick="toggleReadAloud()" aria-label="Stop reading aloud"><i class="fa-solid fa-stop"></i> Stop</button></div>
 
-            <!-- Click Prompt Indicator -->
-            <div class="mb-4 flex flex-col items-center animate-bounce">
-                <span class="px-5 py-2 rounded-full bg-amber-500/30 border border-amber-400/60 text-amber-200 text-xs font-bold flex items-center gap-2 shadow-lg group-hover:bg-amber-500/50 transition">
-                    <i class="fa-solid fa-hand-pointer"></i> Click Cover to Open Book
+    <!-- Closed cover -->
+    <div id="closedBookView">
+        <div class="scene" id="coverScene">
+            <div class="c-shadow" aria-hidden="true"></div>
+            <button class="cover" id="cover" onclick="openBook()" aria-label="Open the book">
+                <span class="c-pages" aria-hidden="true"></span>
+                <span class="c-face">
+                    <span class="c-hinge"></span>
+                    <span class="c-frame">
+                        <span class="c-emblem"><i class="fa-solid fa-book-open"></i></span>
+                        <span class="c-ed">Collector's Edition</span>
+                        <span class="c-title" id="closedCoverTitle">THE GOLDEN CODEX</span>
+                        <span class="c-rule"></span>
+                        <span class="c-sub">An interactive reader</span>
+                    </span>
+                    <span class="c-sheen"></span>
                 </span>
-            </div>
-        </div>
-        <p class="mt-4 text-xs text-amber-300/80 tracking-wide font-sans font-medium">Click anywhere on the book cover to open</p>
-    </div>
-
-    <!-- OPEN BOOK SPREAD CONTAINER -->
-        <div id="bookContainer" class="book-spread w-full max-w-3xl h-[82vh] min-h-[580px] max-h-[850px] rounded-r-lg rounded-l-lg flex relative border border-black/20 overflow-hidden hidden">
-            
-            <!-- Spine shadow layer -->
-            <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-10 sm:w-12 book-spine-line z-30 pointer-events-none rounded-sm"></div>
-
-            <!-- Left Stack Edge FX -->
-            <div class="book-left-edge absolute -left-2 top-2 bottom-2 w-2 rounded-l-md pointer-events-none z-10"></div>
-            <!-- Right Stack Edge FX -->
-            <div class="book-right-edge absolute -right-2 top-2 bottom-2 w-2 rounded-r-md pointer-events-none z-10"></div>
-
-            <!-- LEFT PAGE -->
-            <div id="leftPage" class="book-page w-1/2 h-full rounded-l-xl p-3 sm:p-5 flex flex-col justify-between relative border-r border-black/10 transition-colors duration-300">
-                <!-- Top Header -->
-                <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0">
-                    <span id="leftChapterTitle" class="font-heading text-xs uppercase tracking-widest opacity-60">Chapter I</span>
-                    <button id="addBookmarkLeftBtn" onclick="toggleBookmarkCurrent(0)" class="text-xs opacity-40 hover:opacity-100 transition" title="Bookmark Left Page">
-                        <i class="fa-regular fa-bookmark"></i>
-                    </button>
-                </div>
-
-                <!-- Left Page Main Content Container -->
-                <div id="leftPageContent" class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex flex-col items-center justify-start">
-                    <!-- Text or PDF page content renders here -->
-                </div>
-
-                <!-- Bottom Footer & CIRCULAR LEFT TURN BUTTON (BOTTOM LEFT) -->
-                <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0">
-                    <!-- Circular Left Turn Button on Bottom Left -->
-                    <button id="leftCornerTurnBtn" onclick="prevPage()" class="corner-btn w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-700 hover:bg-amber-600 text-amber-100 flex items-center justify-center font-bold shadow-lg border-2 border-amber-300/40 group relative z-20" title="Turn Left / Previous Page">
-                        <i class="fa-solid fa-arrow-left text-base group-hover:-translate-x-1 transition-transform"></i>
-                        <span class="absolute -top-8 left-0 bg-black/80 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Previous Page</span>
-                    </button>
-
-                    <!-- Left Page Number -->
-                    <span id="leftPageNum" class="font-serif text-xs opacity-60 font-semibold tracking-wider">Page 1</span>
-                </div>
-            </div>
-
-            <!-- RIGHT PAGE -->
-            <div id="rightPage" class="book-page w-1/2 h-full rounded-r-xl p-3 sm:p-5 flex flex-col justify-between relative border-l border-black/5 transition-colors duration-300">
-                <!-- Top Header -->
-                <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0">
-                    <button id="addBookmarkRightBtn" onclick="toggleBookmarkCurrent(1)" class="text-xs opacity-40 hover:opacity-100 transition" title="Bookmark Right Page">
-                        <i class="fa-regular fa-bookmark"></i>
-                    </button>
-                    <span id="rightChapterTitle" class="font-heading text-xs uppercase tracking-widest opacity-60">The Golden Codex</span>
-                </div>
-
-                <!-- Right Page Main Content Container -->
-                <div id="rightPageContent" class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex flex-col items-center justify-start">
-                    <!-- Text or PDF page content renders here -->
-                </div>
-
-                <!-- Bottom Footer & CIRCULAR RIGHT TURN BUTTON (BOTTOM RIGHT) -->
-                <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0">
-                    <!-- Right Page Number -->
-                    <span id="rightPageNum" class="font-serif text-xs opacity-60 font-semibold tracking-wider">Page 2</span>
-
-                    <!-- Circular Right Turn Button on Bottom Right -->
-                    <button id="rightCornerTurnBtn" onclick="nextPage()" class="corner-btn w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-700 hover:bg-amber-600 text-amber-100 flex items-center justify-center font-bold shadow-lg border-2 border-amber-300/40 group relative z-20" title="Turn Right / Next Page">
-                        <i class="fa-solid fa-arrow-right text-base group-hover:translate-x-1 transition-transform"></i>
-                        <span class="absolute -top-8 right-0 bg-black/80 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Next Page</span>
-                    </button>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- FOOTER CONTROLS -->
-    <footer class="w-full bg-black/40 backdrop-blur-md border-t border-white/10 px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-white z-30">
-        <div class="flex items-center space-x-3 text-xs sm:text-sm text-gray-300">
-            <span id="pageProgressText" class="font-medium text-amber-200">Spread 1 of 3</span>
-        </div>
-
-        <!-- Slider Navigation -->
-        <div class="flex items-center space-x-3 w-full sm:w-auto max-w-md">
-            <span class="text-xs text-gray-400">Start</span>
-            <input type="range" id="pageSlider" min="0" max="2" value="0" step="1" oninput="goToSpread(parseInt(this.value))" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500">
-            <span class="text-xs text-gray-400">End</span>
-        </div>
-
-        <!-- Jump Controls -->
-        <div class="flex items-center space-x-2">
-            <button onclick="goToSpread(0)" class="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-semibold transition">
-                <i class="fa-solid fa-backward-step"></i> First
-            </button>
-            <button onclick="goToSpread(getMaxSpreadIndex())" class="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-xs font-semibold transition">
-                Last <i class="fa-solid fa-forward-step"></i>
             </button>
         </div>
-    </footer>
-
-    <div id="pdfLoadingModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex flex-col items-center justify-center p-4 text-white">
-        <div class="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h3 class="font-heading text-xl font-bold text-amber-300 mb-1">Processing PDF Document...</h3>
-        <p id="pdfLoadingProgress" class="text-sm text-gray-300">Converting PDF pages into book layout...</p>
+        <div class="hint"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i><span class="h-mouse">Click the cover to open</span><span class="h-touch">Tap the cover to open</span></div>
     </div>
 
-    <!-- Table of Contents Modal -->
-    <div id="tocModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity flex justify-start" onclick="closeTOC()">
-        <div class="w-80 max-w-full bg-gray-900 text-white h-full shadow-2xl p-6 flex flex-col justify-between" onclick="event.stopPropagation()">
-            <div>
-                <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-6">
-                    <h2 class="font-heading text-xl font-bold text-amber-400 flex items-center space-x-2">
-                        <i class="fa-solid fa-book-bookmark text-base"></i>
-                        <span>Contents</span>
-                    </h2>
-                    <button onclick="closeTOC()" class="w-8 h-8 rounded-full hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div id="tocList" class="space-y-2 max-h-[70vh] overflow-y-auto pr-1"></div>
-            </div>
-            <div class="text-xs text-gray-500 border-t border-gray-800 pt-4 text-center">
-                Use bottom corner circular buttons to flip pages.
+    <!-- Open book -->
+    <div id="bookContainer" class="book" role="group" aria-label="Open book">
+        <div class="boards"></div><div class="edge edge-l"></div><div class="edge edge-r"></div>
+        <div id="leftPage" class="pg l"></div>
+        <div id="rightPage" class="pg r"></div>
+        <div class="spine"></div>
+    </div>
+</main>
+
+<!-- ============ FOOTER: progress ============ -->
+<footer class="foot" id="readerFooter">
+    <div class="foot-in">
+        <button class="ib dsk" id="firstBtn" onclick="goToSpread(0)" data-tip="First page" aria-label="Go to first page"><i class="fa-solid fa-backward-step"></i></button>
+        <button class="navc mob" id="mobPrev" onclick="prevPage()" aria-label="Previous page"><i class="fa-solid fa-chevron-left"></i></button>
+
+        <div class="prog">
+            <div class="prog-meta"><b id="pageProgressText">Page 1 of 4</b><span id="pctText">25% read</span></div>
+            <div class="track" id="pageSlider" role="slider" tabindex="0" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
+                <div class="rail"><div class="fill"></div></div><div class="thumb"></div>
             </div>
         </div>
+
+        <button class="navc mob" id="mobNext" onclick="nextPage()" aria-label="Next page"><i class="fa-solid fa-chevron-right"></i></button>
+        <button class="ib dsk" id="lastBtn" onclick="goToSpread(getMaxSpreadIndex())" data-tip="Last page" aria-label="Go to last page"><i class="fa-solid fa-forward-step"></i></button>
     </div>
+</footer>
 
-    <!-- Message Toast -->
-    <div id="toast" class="fixed bottom-16 left-1/2 -translate-x-1/2 bg-amber-900/90 border border-amber-500/50 text-amber-100 text-xs px-4 py-2 rounded-full shadow-2xl opacity-0 pointer-events-none transition-opacity z-50 flex items-center space-x-2">
-        <i class="fa-solid fa-circle-info"></i>
-        <span id="toastMsg">Notification</span>
+<!-- ============ Contents / bookmarks drawer ============ -->
+<div class="layer" id="tocModal" onclick="closeTOC()">
+    <div class="layer-bg"></div>
+    <aside class="drawer" id="tocDrawer" role="dialog" aria-modal="true" aria-label="Contents and bookmarks" onclick="event.stopPropagation()">
+        <div class="dr-head"><h2>Contents</h2><button class="ib" id="tocClose" onclick="closeTOC()" aria-label="Close contents"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="tabs" role="tablist">
+            <button class="tab" id="tabChapters" role="tab" aria-selected="true" aria-controls="tocList" onclick="setTab('chapters')">Chapters</button>
+            <button class="tab" id="tabMarks" role="tab" aria-selected="false" aria-controls="bmList" onclick="setTab('marks')">Bookmarks<span class="count" id="bmCount"></span></button>
+        </div>
+        <ul class="dr-list" id="tocList" role="tabpanel" aria-labelledby="tabChapters"></ul>
+        <ul class="dr-list" id="bmList" role="tabpanel" aria-labelledby="tabMarks" hidden></ul>
+    </aside>
+</div>
+
+<!-- ============ PDF processing modal ============ -->
+<div class="modal" id="pdfLoadingModal" role="dialog" aria-modal="true" aria-labelledby="pdfTitle">
+    <div class="m-card">
+        <div class="ring" id="pdfRing" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="PDF processing progress">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="spin" cx="60" cy="60" r="56" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="3 7"/>
+                <circle cx="60" cy="60" r="46" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/>
+                <circle class="arc" id="pdfArc" cx="60" cy="60" r="46" fill="none" stroke="var(--gold-2)" stroke-width="5" stroke-linecap="round" stroke-dasharray="289.03" stroke-dashoffset="289.03"/>
+            </svg>
+            <div class="pct" id="pdfPct">0%</div>
+        </div>
+        <h3 id="pdfTitle">Processing PDF</h3>
+        <p id="pdfLoadingProgress">Reading file…</p>
+        <p class="fn" id="pdfFileName"></p>
     </div>
-
-    <script>
-        // Default Sample Book Content
-        const initialPages = [
-            {
-                chapter: "Chapter I: The Arrival",
-                title: "The Scholar's Gateway",
-                content: `
-                    <div class="w-full text-left">
-                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">The Scholar's Gateway</h2>
-                        <p class="mb-2.5">The rain had begun to fall softly over the ancient spires of Oakhaven as Julian adjusted his heavy woolen cloak against the evening chill. In his hand-stitched leather travel bag lay a worn parchment map, inked in faded copper, detailing hidden paths forgotten by common cartographers for over three centuries.</p>
-                        <p class="mb-2.5">He stepped into the Grand Library's dimly lit atrium, where tall marble archways towered high above, holding tens of thousands of leather-bound folios. Every volume carried the profound weight of bygone eras, quiet wisdom waiting patiently for a reader brave enough to turn its sacred leaves.</p>
-                        <blockquote class="italic border-l-2 border-amber-700 pl-2.5 my-2.5 text-amber-900 bg-amber-900/5 py-1">"Knowledge is not merely acquired in haste; it is uncovered layer by layer, much like the gentle flip of a turning page."</blockquote>
-                        <p class="mb-2.5">Julian reached toward a dark mahogany desk where an illuminated brass lantern cast long, golden shadows across a waiting parchment manuscript.</p>
-                    </div>
-                `
-            },
-            {
-                chapter: "Chapter I: The Arrival",
-                title: "The Whispering Quill",
-                content: `
-                    <div class="w-full text-left">
-                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">The Whispering Quill</h2>
-                        <p class="mb-2.5">Sitting down on the plush velvet chair, Julian gently unclasped the antique brass bindings of the large codex before him. The paper was remarkably thick, textured, and scented faintly of dried lavender and cedarwood.</p>
-                        <p class="mb-2.5">On the margin of page twelve, a tiny inscription had been handwritten in sharp silver ink: <em>'To those who seek the golden truth, follow the twin circular seals placed at the bottom of the leaves.'</em></p>
-                        <p class="mb-2.5">He smiled knowingly, placing his fingers near the circular stamp at the bottom corner. As his fingertips grazed the edge, the parchment seemed to rustle with a quiet, musical resonance that echoed softly in his ears.</p>
-                        <p class="mb-2.5">Outside, the distant thunderstorm grew louder, but inside the sanctuary of the reading hall, only the steady, rhythmic turn of pages broke the silent night air.</p>
-                    </div>
-                `
-            },
-            {
-                chapter: "Chapter II: PDF & Navigation Guide",
-                title: "PDF Upload Feature",
-                content: `
-                    <div class="w-full text-left">
-                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">Upload Custom PDFs</h2>
-                        <p class="mb-2.5">You can upload any PDF document using the <strong>"Upload PDF"</strong> button in the top navigation bar. Every page populates in sequence without file extensions in titles.</p>
-                        <p class="mb-2.5">Enjoy clean reading with custom voice narration, theme toggles, and smooth 3D page flips.</p>
-                    </div>
-                `
-            },
-            {
-                chapter: "Chapter II: PDF & Navigation Guide",
-                title: "Circular Navigation",
-                content: `
-                    <div class="w-full text-left">
-                        <h2 class="font-heading text-lg sm:text-xl font-bold text-amber-800 mb-2">Page Turning & Gesture Controls</h2>
-                        <p class="mb-2.5"><strong>1. Circular Bottom Corner Buttons:</strong> Use the bottom-left circular button on left pages to flip back, and the bottom-right circular button on right pages to flip forward.</p>
-                        <p class="mb-2.5"><strong>2. Drag & Swipe:</strong> You can also drag horizontally across the book spread with your mouse or finger on touch screens.</p>
-                        <p class="mb-2.5"><strong>3. Sound & Themes:</strong> Toggle paper-turning audio effects and switch themes using the top toolbar.</p>
-                    </div>
-                `
-            }
-        ];
-
-        let bookPages = [...initialPages];
-        let currentSpread = 0;
-        let soundEnabled = true;
-        let savedBookmarks = [];
-        let audioCtx = null;
-        let isSpeaking = false;
-        let isBookOpen = false;
-        let availableVoices = [];
-        let isAnimating = false;
-
-        // Load available system voices for browser TTS
-        function loadVoices() {
-            if ('speechSynthesis' in window) {
-                availableVoices = window.speechSynthesis.getVoices();
-                const voiceSelect = document.getElementById('voiceSelect');
-                if (!voiceSelect) return;
-
-                voiceSelect.innerHTML = '<option value="">Browser Default</option>';
-                availableVoices.forEach((v, idx) => {
-                    const option = document.createElement('option');
-                    option.value = idx;
-                    option.textContent = `${v.name} (${v.lang})`;
-                    voiceSelect.appendChild(option);
-                });
-            }
-        }
-
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = loadVoices;
-        }
-
-        function getMaxSpreadIndex() {
-            return Math.max(0, Math.ceil(bookPages.length / 2) - 1);
-        }
-
-        function openBook() {
-            if (isBookOpen) return;
-            playPageTurnSound();
-            
-            const closedView = document.getElementById('closedBookView');
-            const bookContainer = document.getElementById('bookContainer');
-            const closeBtn = document.getElementById('closeBookHeaderBtn');
-
-            closedView.classList.add('opening-animation');
-
-            setTimeout(() => {
-                closedView.classList.add('hidden');
-                closedView.classList.remove('opening-animation');
-                
-                bookContainer.classList.remove('hidden');
-                bookContainer.classList.add('flex');
-                
-                if (closeBtn) closeBtn.classList.remove('hidden');
-                isBookOpen = true;
-                renderSpread();
-                showToast("Book Opened! Use bottom circular corner buttons to flip pages.");
-            }, 400);
-        }
-
-        function closeBook() {
-            if (isSpeaking) {
-                window.speechSynthesis.cancel();
-                isSpeaking = false;
-                updateReadAloudBtnUI();
-            }
-
-            const closedView = document.getElementById('closedBookView');
-            const bookContainer = document.getElementById('bookContainer');
-            const closeBtn = document.getElementById('closeBookHeaderBtn');
-
-            bookContainer.classList.add('hidden');
-            bookContainer.classList.remove('flex');
-
-            closedView.classList.remove('hidden');
-            if (closeBtn) closeBtn.classList.add('hidden');
-
-            isBookOpen = false;
-        }
-
-        function syncClosedCoverTitle(titleText) {
-            const coverTitle = document.getElementById('closedCoverTitle');
-            if (coverTitle) {
-                const cleanTitle = titleText.replace(/\.pdf$/i, '');
-                coverTitle.textContent = cleanTitle.toUpperCase().slice(0, 30);
-            }
-        }
-
-        function renderSpread() {
-            const leftIdx = currentSpread * 2;
-            const rightIdx = currentSpread * 2 + 1;
-
-            const leftPage = bookPages[leftIdx];
-            const rightPage = bookPages[rightIdx];
-
-            // Render Left Page
-            const leftContentEl = document.getElementById('leftPageContent');
-            const leftChapterEl = document.getElementById('leftChapterTitle');
-            const leftNumEl = document.getElementById('leftPageNum');
-            
-            if (leftPage) {
-                leftContentEl.innerHTML = leftPage.type === 'pdf' ? `<img src="${leftPage.dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : leftPage.content;
-                leftChapterEl.textContent = leftPage.chapter || `Page ${leftIdx + 1}`;
-                leftNumEl.textContent = `Page ${leftIdx + 1}`;
-            } else {
-                leftContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
-                leftChapterEl.textContent = "";
-                leftNumEl.textContent = "";
-            }
-
-            // Render Right Page
-            const rightContentEl = document.getElementById('rightPageContent');
-            const rightChapterEl = document.getElementById('rightChapterTitle');
-            const rightNumEl = document.getElementById('rightPageNum');
-
-            if (rightPage) {
-                rightContentEl.innerHTML = rightPage.type === 'pdf' ? `<img src="${rightPage.dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : rightPage.content;
-                rightChapterEl.textContent = rightPage.chapter || `Page ${rightIdx + 1}`;
-                rightNumEl.textContent = `Page ${rightIdx + 1}`;
-            } else {
-                rightContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
-                rightChapterEl.textContent = "";
-                rightNumEl.textContent = "";
-            }
-
-            // Update Progress & Slider
-            const maxSpread = getMaxSpreadIndex();
-            document.getElementById('pageProgressText').textContent = `Spread ${currentSpread + 1} of ${maxSpread + 1}`;
-            
-            const slider = document.getElementById('pageSlider');
-            if (slider) {
-                slider.max = maxSpread;
-                slider.value = currentSpread;
-            }
-
-            // Update Bookmark Icons
-            const bmLeft = document.getElementById('addBookmarkLeftBtn');
-            const bmRight = document.getElementById('addBookmarkRightBtn');
-            if (bmLeft) bmLeft.innerHTML = savedBookmarks.includes(leftIdx) ? `<i class="fa-solid fa-bookmark text-amber-600"></i>` : `<i class="fa-regular fa-bookmark"></i>`;
-            if (bmRight) bmRight.innerHTML = savedBookmarks.includes(rightIdx) ? `<i class="fa-solid fa-bookmark text-amber-600"></i>` : `<i class="fa-regular fa-bookmark"></i>`;
-        }
-
-        function getPageInnerHTML(idx) {
-            const page = bookPages[idx];
-            if (!page) {
-                return `
-                    <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0"></div>
-                    <div class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex items-center justify-center text-gray-400 italic">End of book</div>
-                    <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0"></div>
-                `;
-            }
-            return `
-                <div class="flex items-center justify-between border-b border-black/10 pb-1.5 mb-2 shrink-0">
-                    <span class="font-heading text-xs uppercase tracking-widest opacity-60">${page.chapter || 'Page ' + (idx + 1)}</span>
-                </div>
-                <div class="flex-1 overflow-y-auto font-serif leading-snug text-xs sm:text-sm md:text-base pr-1 flex flex-col items-center justify-start">
-                    ${page.type === 'pdf' ? `<img src="${page.dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : page.content}
-                </div>
-                <div class="pt-2 border-t border-black/10 flex items-center justify-between relative mt-1 shrink-0">
-                    <span class="font-serif text-xs opacity-60 font-semibold tracking-wider">Page ${idx + 1}</span>
-                </div>
-            `;
-        }
-
-        function animatePageTurn(targetSpread, direction) {
-            if (isAnimating || targetSpread === currentSpread) return;
-            if (targetSpread < 0 || targetSpread > getMaxSpreadIndex()) return;
-
-            isAnimating = true;
-            playPageTurnSound();
-
-            const container = document.getElementById('bookContainer');
-            if (!container) {
-                currentSpread = targetSpread;
-                renderSpread();
-                isAnimating = false;
-                return;
-            }
-
-            const leftPageEl = document.getElementById('leftPage');
-            const pageBg = leftPageEl ? getComputedStyle(leftPageEl).backgroundColor : '#FAF6EE';
-            const pageColor = leftPageEl ? getComputedStyle(leftPageEl).color : '#2B2621';
-
-            const leaf = document.createElement('div');
-            leaf.className = `flip-leaf ${direction === 'next' ? 'flip-leaf-right' : 'flip-leaf-left'}`;
-
-            const frontFace = document.createElement('div');
-            frontFace.className = 'flip-face book-page p-3 sm:p-5 flex flex-col justify-between border border-black/10 rounded-r-xl';
-            frontFace.style.backgroundColor = pageBg;
-            frontFace.style.color = pageColor;
-
-            const backFace = document.createElement('div');
-            backFace.className = 'flip-face flip-face-back book-page p-3 sm:p-5 flex flex-col justify-between border border-black/10 rounded-l-xl';
-            backFace.style.backgroundColor = pageBg;
-            backFace.style.color = pageColor;
-
-            if (direction === 'next') {
-                const currentRightIdx = currentSpread * 2 + 1;
-                const targetLeftIdx = targetSpread * 2;
-
-                frontFace.innerHTML = getPageInnerHTML(currentRightIdx);
-                backFace.innerHTML = getPageInnerHTML(targetLeftIdx);
-
-                const rightContentEl = document.getElementById('rightPageContent');
-                const rightChapterEl = document.getElementById('rightChapterTitle');
-                const rightNumEl = document.getElementById('rightPageNum');
-                const targetRightIdx = targetSpread * 2 + 1;
-
-                if (bookPages[targetRightIdx]) {
-                    rightContentEl.innerHTML = bookPages[targetRightIdx].type === 'pdf' ? `<img src="${bookPages[targetRightIdx].dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : bookPages[targetRightIdx].content;
-                    rightChapterEl.textContent = bookPages[targetRightIdx].chapter || `Page ${targetRightIdx + 1}`;
-                    rightNumEl.textContent = `Page ${targetRightIdx + 1}`;
-                } else {
-                    rightContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
-                    rightChapterEl.textContent = "";
-                    rightNumEl.textContent = "";
-                }
-            } else {
-                const currentLeftIdx = currentSpread * 2;
-                const targetRightIdx = targetSpread * 2 + 1;
-
-                frontFace.innerHTML = getPageInnerHTML(currentLeftIdx);
-                backFace.innerHTML = getPageInnerHTML(targetRightIdx);
-
-                const leftContentEl = document.getElementById('leftPageContent');
-                const leftChapterEl = document.getElementById('leftChapterTitle');
-                const leftNumEl = document.getElementById('leftPageNum');
-                const targetLeftIdx = targetSpread * 2;
-
-                if (bookPages[targetLeftIdx]) {
-                    leftContentEl.innerHTML = bookPages[targetLeftIdx].type === 'pdf' ? `<img src="${bookPages[targetLeftIdx].dataUrl}" class="max-w-full max-h-full object-contain shadow-md rounded">` : bookPages[targetLeftIdx].content;
-                    leftChapterEl.textContent = bookPages[targetLeftIdx].chapter || `Page ${targetLeftIdx + 1}`;
-                    leftNumEl.textContent = `Page ${targetLeftIdx + 1}`;
-                } else {
-                    leftContentEl.innerHTML = `<div class="flex items-center justify-center h-full text-gray-400 italic">End of book</div>`;
-                    leftChapterEl.textContent = "";
-                    leftNumEl.textContent = "";
-                }
-            }
-
-            leaf.appendChild(frontFace);
-            leaf.appendChild(backFace);
-            container.appendChild(leaf);
-
-            leaf.offsetHeight;
-
-            requestAnimationFrame(() => {
-                leaf.style.transform = direction === 'next' ? 'rotateY(-180deg)' : 'rotateY(180deg)';
-            });
-
-            setTimeout(() => {
-                currentSpread = targetSpread;
-                renderSpread();
-                if (leaf.parentNode) {
-                    leaf.parentNode.removeChild(leaf);
-                }
-                isAnimating = false;
-            }, 1000);
-        }
-
-        function nextPage() {
-            if (isAnimating) return;
-            if (currentSpread < getMaxSpreadIndex()) {
-                animatePageTurn(currentSpread + 1, 'next');
-            } else {
-                showToast("You are on the last page.");
-            }
-        }
-
-        function prevPage() {
-            if (isAnimating) return;
-            if (currentSpread > 0) {
-                animatePageTurn(currentSpread - 1, 'prev');
-            } else {
-                showToast("You are on the first page.");
-            }
-        }
-
-        function goToSpread(spreadIdx) {
-            if (isAnimating) return;
-            const target = Math.max(0, Math.min(spreadIdx, getMaxSpreadIndex()));
-            if (target > currentSpread) {
-                animatePageTurn(target, 'next');
-            } else if (target < currentSpread) {
-                animatePageTurn(target, 'prev');
-            }
-        }
-
-        function playPageTurnSound() {
-            if (!soundEnabled) return;
-            try {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-
-                const bufferSize = audioCtx.sampleRate * 0.18;
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
-
-                const noise = audioCtx.createBufferSource();
-                noise.buffer = buffer;
-
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.frequency.value = 1100;
-                filter.Q.value = 1.5;
-
-                const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
-
-                noise.connect(filter);
-                filter.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                noise.start();
-            } catch (e) {
-                console.warn("Audio Context error:", e);
-            }
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            const btn = document.getElementById('soundToggleBtn');
-            if (btn) {
-                btn.innerHTML = soundEnabled ? `<i class="fa-solid fa-volume-high"></i>` : `<i class="fa-solid fa-volume-xmark"></i>`;
-            }
-            showToast(soundEnabled ? "Sound Effects Enabled" : "Sound Effects Muted");
-        }
-
-        function setTheme(theme) {
-            document.body.className = `theme-${theme} h-full font-sans antialiased flex flex-col justify-between select-none overflow-x-hidden`;
-            showToast(`Theme changed to ${theme}`);
-        }
-
-        function toggleReadAloud() {
-            if (isSpeaking) {
-                window.speechSynthesis.cancel();
-                isSpeaking = false;
-                updateReadAloudBtnUI();
-                showToast("Read Aloud Stopped.");
-                return;
-            }
-
-            const leftIdx = currentSpread * 2;
-            const rightIdx = currentSpread * 2 + 1;
-
-            let textToRead = "";
-            [leftIdx, rightIdx].forEach(idx => {
-                if (bookPages[idx] && bookPages[idx].content) {
-                    const temp = document.createElement('div');
-                    temp.innerHTML = bookPages[idx].content;
-                    textToRead += " " + (temp.textContent || temp.innerText || "");
-                }
-            });
-
-            textToRead = textToRead.trim();
-            if (!textToRead) {
-                showToast("No readable text found on this page spread.");
-                return;
-            }
-
-            const utterance = new SpeechSynthesisUtterance(textToRead);
-            utterance.rate = 0.95;
-            utterance.pitch = 1.0;
-
-            const voiceSelect = document.getElementById('voiceSelect');
-            if (voiceSelect && voiceSelect.value !== "") {
-                const selectedIdx = parseInt(voiceSelect.value);
-                if (availableVoices[selectedIdx]) {
-                    utterance.voice = availableVoices[selectedIdx];
-                }
-            } else {
-                const containsHindi = /[\u0900-\u097F]/.test(textToRead);
-                if (containsHindi) {
-                    const hindiVoice = availableVoices.find(v => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi'));
-                    if (hindiVoice) utterance.voice = hindiVoice;
-                } else {
-                    const naturalVoice = availableVoices.find(v => v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'));
-                    if (naturalVoice) utterance.voice = naturalVoice;
-                }
-            }
-
-            utterance.onend = () => {
-                isSpeaking = false;
-                updateReadAloudBtnUI();
-            };
-            utterance.onerror = () => {
-                isSpeaking = false;
-                updateReadAloudBtnUI();
-            };
-
-            window.speechSynthesis.speak(utterance);
-            isSpeaking = true;
-            updateReadAloudBtnUI();
-            
-            const selectedVoiceName = utterance.voice ? utterance.voice.name : "Browser Default";
-            showToast(`Reading spread aloud using: ${selectedVoiceName.slice(0, 20)}...`);
-        }
-
-        function updateReadAloudBtnUI() {
-            const btn = document.getElementById('readAloudBtn');
-            const txt = document.getElementById('readAloudText');
-            if (btn && txt) {
-                if (isSpeaking) {
-                    btn.className = "px-3 py-1 rounded-lg bg-red-700 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold flex items-center space-x-1.5 transition shadow animate-pulse";
-                    txt.textContent = "Stop Reading";
-                } else {
-                    btn.className = "px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold flex items-center space-x-1.5 transition shadow";
-                    txt.textContent = "Read Spread";
-                }
-            }
-        }
-
-        async function handlePdfUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const modal = document.getElementById('pdfLoadingModal');
-            const progress = document.getElementById('pdfLoadingProgress');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            try {
-                const fileArrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: fileArrayBuffer }).promise;
-
-                const newPages = [];
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    progress.textContent = `Converting page ${i} of ${pdf.numPages}...`;
-                    const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 });
-
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                    const textContent = await page.getTextContent();
-                    const textItems = textContent.items.map(item => item.str).join(' ');
-
-                    newPages.push({
-                        type: 'pdf',
-                        dataUrl: dataUrl,
-                        content: `<p>${textItems}</p>`,
-                        chapter: `PDF Page ${i}`,
-                        title: file.name.replace(/\.pdf$/i, '')
-                    });
-                }
-
-                bookPages = newPages;
-                currentSpread = 0;
-                const cleanFileName = file.name.replace(/\.pdf$/i, '');
-                document.getElementById('bookTitleDisplay').textContent = cleanFileName.slice(0, 25);
-                syncClosedCoverTitle(cleanFileName);
-                
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                
-                // Close the book cover when PDF is uploaded so user can click to open the new PDF book
-                closeBook();
-                showToast(`PDF Loaded (${pdf.numPages} Pages)! Click cover to open.`);
-            } catch (err) {
-                console.error("PDF parse error:", err);
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                showToast("Failed to process PDF file.");
-            }
-        }
-
-        function toggleTOC() {
-            const modal = document.getElementById('tocModal');
-            const list = document.getElementById('tocList');
-            if (modal.classList.contains('hidden')) {
-                list.innerHTML = "";
-                bookPages.forEach((p, idx) => {
-                    const item = document.createElement('button');
-                    item.className = "w-full text-left p-2 rounded hover:bg-gray-800 text-xs text-amber-200 border-b border-gray-800/50 flex justify-between";
-                    item.innerHTML = `<span>${p.chapter || 'Page ' + (idx + 1)} - ${p.title || ''}</span><span class="opacity-60">P. ${idx + 1}</span>`;
-                    item.onclick = () => {
-                        goToSpread(Math.floor(idx / 2));
-                        closeTOC();
-                    };
-                    list.appendChild(item);
-                });
-                modal.classList.remove('hidden');
-            } else {
-                closeTOC();
-            }
-        }
-
-        function closeTOC() {
-            document.getElementById('tocModal').classList.add('hidden');
-        }
-
-        function toggleBookmarkCurrent(offset) {
-            const pageIdx = currentSpread * 2 + offset;
-            const exists = savedBookmarks.indexOf(pageIdx);
-            if (exists > -1) {
-                savedBookmarks.splice(exists, 1);
-                showToast(`Bookmark removed from Page ${pageIdx + 1}`);
-            } else {
-                savedBookmarks.push(pageIdx);
-                showToast(`Bookmarked Page ${pageIdx + 1}`);
-            }
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span id="toastMsg">Notification</span></div>
+
+<script>
+/* ============ Data ============ */
+const initialPages = [
+    {
+        chapter: "Chapter I: The Arrival",
+        title: "The Scholar's Gateway",
+        content: `
+            <h2>The Scholar's Gateway</h2>
+            <p>The rain had begun to fall softly over the ancient spires of Oakhaven as Julian adjusted his heavy woolen cloak against the evening chill. In his hand-stitched leather travel bag lay a worn parchment map, inked in faded copper, detailing hidden paths forgotten by common cartographers for over three centuries.</p>
+            <p>He stepped into the Grand Library's dimly lit atrium, where tall marble archways towered high above, holding tens of thousands of leather-bound folios. Every volume carried the profound weight of bygone eras, quiet wisdom waiting patiently for a reader brave enough to turn its sacred leaves.</p>
+            <blockquote>"Knowledge is not merely acquired in haste; it is uncovered layer by layer, much like the gentle flip of a turning page."</blockquote>
+            <p>Julian reached toward a dark mahogany desk where an illuminated brass lantern cast long, golden shadows across a waiting parchment manuscript.</p>`
+    },
+    {
+        chapter: "Chapter I: The Arrival",
+        title: "The Whispering Quill",
+        content: `
+            <h2>The Whispering Quill</h2>
+            <p>Sitting down on the plush velvet chair, Julian gently unclasped the antique brass bindings of the large codex before him. The paper was remarkably thick, textured, and scented faintly of dried lavender and cedarwood.</p>
+            <p>On the margin of page twelve, a tiny inscription had been handwritten in sharp silver ink: <em>'To those who seek the golden truth, follow the twin circular seals placed at the bottom of the leaves.'</em></p>
+            <p>He smiled knowingly, placing his fingers near the circular stamp at the bottom corner. As his fingertips grazed the edge, the parchment seemed to rustle with a quiet, musical resonance that echoed softly in his ears.</p>
+            <p>Outside, the distant thunderstorm grew louder, but inside the sanctuary of the reading hall, only the steady, rhythmic turn of pages broke the silent night air.</p>`
+    },
+    {
+        chapter: "Chapter II: PDF & Navigation Guide",
+        title: "PDF Upload Feature",
+        content: `
+            <h2>Upload Custom PDFs</h2>
+            <p>You can upload any PDF document using the <strong>"Upload PDF"</strong> button in the top navigation bar. Every page populates in sequence without file extensions in titles.</p>
+            <p>Enjoy clean reading with custom voice narration, theme toggles, and smooth 3D page flips.</p>`
+    },
+    {
+        chapter: "Chapter II: PDF & Navigation Guide",
+        title: "Circular Navigation",
+        content: `
+            <h2>Page Turning &amp; Gesture Controls</h2>
+            <p><strong>1. Circular Bottom Corner Buttons:</strong> Use the bottom-left circular button on left pages to flip back, and the bottom-right circular button on right pages to flip forward.</p>
+            <p><strong>2. Drag &amp; Swipe:</strong> You can also drag horizontally across the book spread with your mouse or finger on touch screens.</p>
+            <p><strong>3. Keyboard:</strong> Use the arrow keys or Space to turn pages, and Home or End to jump to the first or last page.</p>
+            <p><strong>4. Sound &amp; Themes:</strong> Toggle paper-turning audio effects and switch themes using the toolbar.</p>`
+    }
+];
+
+let bookPages = [...initialPages];
+let currentSpread = 0;   // index of the current "view": a two-page spread on desktop, a single page on mobile
+let soundEnabled = true;
+let savedBookmarks = [];
+let audioCtx = null;
+let isSpeaking = false;
+let isBookOpen = false;
+let availableVoices = [];
+let isAnimating = false;
+
+let ppv = 2;             // pages per view (1 = mobile single page, 2 = spread)
+let isOpening = false, pdfBusy = false, bmPulse = -1, pendingFlip = null, speakVoiceName = '', toastTimer = null, lastFocus = null;
+
+const layoutMQ = window.matchMedia('(max-width: 760px), (max-height: 500px)');
+const motionMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+
+const THEMES = {
+    paper:     { name: 'Classic Paper',     sw: '#faf6ee' },
+    sepia:     { name: 'Warm Sepia',        sw: '#f3e7cc' },
+    dark:      { name: 'Night Mode',        sw: '#1b1d24' },
+    parchment: { name: 'Vintage Parchment', sw: '#eedfc0' },
+    midnight:  { name: 'Midnight',          sw: '#141b2e' }
+};
+
+/* ============ Layout mode (1 vs 2 pages per view) ============ */
+function getMaxSpreadIndex() { return Math.max(0, Math.ceil(bookPages.length / ppv) - 1); }
+
+function visibleIdxs() {
+    const base = currentSpread * ppv, out = [];
+    for (let i = 0; i < ppv; i++) if (bookPages[base + i]) out.push(base + i);
+    return out;
+}
+
+function cancelFlip() {
+    if (!pendingFlip) return;
+    clearTimeout(pendingFlip.timer);
+    if (pendingFlip.leaf.parentNode) pendingFlip.leaf.remove();
+    pendingFlip = null;
+    isAnimating = false;
+}
+
+function applyLayout() {
+    cancelFlip();
+    const oldPpv = ppv;
+    const firstPage = currentSpread * oldPpv;
+    ppv = layoutMQ.matches ? 1 : 2;
+    document.body.classList.toggle('compact', ppv === 1);
+    $('bookContainer').classList.toggle('single', ppv === 1);
+    currentSpread = Math.min(Math.floor(firstPage / ppv), getMaxSpreadIndex());
+    if (ppv === 2) closeSheet();
+    if (isBookOpen) renderSpread(); else updateProgress();
+}
+
+/* ============ Voices ============ */
+function loadVoices() {
+    if (!('speechSynthesis' in window)) return;
+    availableVoices = window.speechSynthesis.getVoices();
+    const sel = $('voiceSelect');
+    if (!sel) return;
+    const keep = sel.value;
+    sel.innerHTML = '<option value="">Browser Default</option>';
+    availableVoices.forEach((v, idx) => {
+        const o = document.createElement('option');
+        o.value = idx;
+        o.textContent = `${v.name} (${v.lang})`;
+        sel.appendChild(o);
+    });
+    sel.value = keep;
+}
+if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = loadVoices;
+
+/* ============ Open / close ============ */
+function openBook() {
+    if (isBookOpen || isOpening) return;
+    isOpening = true;
+    playPageTurnSound();
+    const scene = $('coverScene'), view = $('closedBookView'), book = $('bookContainer');
+
+    const finish = () => {
+        view.classList.add('gone');
+        scene.classList.remove('opening');
+        book.classList.add('show', 'enter');
+        document.body.classList.add('is-open');
+        $('closeBookHeaderBtn').hidden = false;
+        isBookOpen = true;
+        isOpening = false;
+        renderSpread();
+        setTimeout(() => book.classList.remove('enter'), 600);
+        showToast(ppv === 1 ? 'Swipe or use the arrows to turn pages.' : 'Book opened. Use the corner buttons or arrow keys to turn pages.');
+    };
+    if (motionMQ.matches) finish(); else { scene.classList.add('opening'); setTimeout(finish, 520); }
+}
+
+function closeBook() {
+    cancelFlip();
+    if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
+        updateReadAloudBtnUI();
+    }
+    closeSheet(); closePops();
+    const view = $('closedBookView'), book = $('bookContainer');
+    book.classList.remove('show', 'enter');
+    view.classList.remove('gone');
+    if (!motionMQ.matches) view.animate([{ opacity: 0, transform: 'scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 400, easing: 'cubic-bezier(.2,.7,.2,1)' });
+    document.body.classList.remove('is-open');
+    $('closeBookHeaderBtn').hidden = true;
+    isBookOpen = false;
+    updateStatus();
+}
+
+function syncClosedCoverTitle(titleText) {
+    const el = $('closedCoverTitle');
+    if (el) el.textContent = titleText.replace(/\.pdf$/i, '').toUpperCase().slice(0, 30);
+}
+
+/* ============ Page rendering ============ */
+function pageHTML(idx, side, live) {
+    const p = bookPages[idx];
+    const atStart = currentSpread === 0, atEnd = currentSpread >= getMaxSpreadIndex();
+    const off = (ppv === 2 && side === 'r') ? 1 : 0;
+
+    let turn = '';
+    if (ppv === 2) {
+        if (side === 'l') turn = live ? `<button id="leftCornerTurnBtn" class="turn" onclick="prevPage()" aria-label="Previous page" title="Previous page" ${atStart ? 'disabled' : ''}><i class="fa-solid fa-arrow-left"></i></button>` : '<span class="turn-sp"></span>';
+        else turn = live ? `<button id="rightCornerTurnBtn" class="turn" onclick="nextPage()" aria-label="Next page" title="Next page" ${atEnd ? 'disabled' : ''}><i class="fa-solid fa-arrow-right"></i></button>` : '<span class="turn-sp"></span>';
+    }
+    const num = p ? `<span class="pnum" aria-label="Page ${idx + 1}">${idx + 1}</span>` : '<span></span>';
+    const foot = `<div class="pg-foot">${side === 'r' ? num + turn : turn + num}</div>`;
+
+    if (!p) return `<div class="pg-head"></div><div class="pg-body end">End of book</div>${foot}`;
+
+    const on = savedBookmarks.includes(idx);
+    const bm = live ? `<button class="bm ${on ? 'on' : ''} ${bmPulse === idx ? 'pulse' : ''}" onclick="toggleBookmarkCurrent(${off})" aria-pressed="${on}" aria-label="${on ? 'Remove bookmark from' : 'Bookmark'} page ${idx + 1}" title="${on ? 'Remove bookmark' : 'Bookmark this page'}"><i class="fa-${on ? 'solid' : 'regular'} fa-bookmark"></i></button>` : '<span></span>';
+    const head = `<div class="pg-head"><span class="ch">${esc(p.chapter || 'Page ' + (idx + 1))}</span>${bm}</div>`;
+    const body = p.type === 'pdf'
+        ? `<div class="pg-body pdf"><img src="${p.dataUrl}" alt="PDF page ${idx + 1}" draggable="false" decoding="async"></div>`
+        : `<div class="pg-body" tabindex="0" role="region" aria-label="Page ${idx + 1} text">${p.content}</div>`;
+    return head + body + foot;
+}
+
+function renderSpread() {
+    const cs = currentSpread;
+    if (ppv === 2) {
+        $('leftPage').innerHTML = pageHTML(cs * 2, 'l', true);
+        $('rightPage').innerHTML = pageHTML(cs * 2 + 1, 'r', true);
+    } else {
+        $('leftPage').innerHTML = '';
+        $('rightPage').innerHTML = pageHTML(cs, 's', true);
+    }
+    $('rightPage').className = 'pg ' + (ppv === 2 ? 'r' : 's');
+    bmPulse = -1;
+    updateProgress();
+    updateStatus();
+}
+
+function updateProgress() {
+    const max = getMaxSpreadIndex(), n = bookPages.length;
+    const first = currentSpread * ppv + 1, last = Math.min(n, currentSpread * ppv + ppv);
+    const label = first >= last ? `Page ${last} of ${n}` : `Pages ${first}–${last} of ${n}`;
+    const pct = Math.round(last / n * 100);
+    const p = max ? currentSpread / max : 0;
+
+    $('pageProgressText').textContent = label;
+    $('pctText').textContent = `${pct}% read`;
+    $('hdrPct').textContent = `${pct}%`;
+    $('hdrFill').style.setProperty('--p', last / n);
+    const s = $('pageSlider');
+    s.style.setProperty('--p', p);
+    s.setAttribute('aria-valuemax', max);
+    s.setAttribute('aria-valuenow', currentSpread);
+    s.setAttribute('aria-valuetext', label);
+
+    $('firstBtn').disabled = $('mobPrev').disabled = currentSpread === 0;
+    $('lastBtn').disabled = $('mobNext').disabled = currentSpread >= max;
+    refreshTOCActive();
+}
+
+function updateStatus() {
+    let t = 'Closed';
+    if (isSpeaking) t = 'Reading aloud';
+    else if (isBookOpen) t = $('pageProgressText').textContent;
+    $('readStatus').textContent = t;
+}
+
+/* ============ Page turning ============ */
+function faceEl(html, side, cls) {
+    const f = document.createElement('div');
+    f.className = `face pg ${side} ${cls}`;
+    f.innerHTML = html + '<i class="shade"></i>';
+    return f;
+}
+
+function animatePageTurn(targetSpread, direction) {
+    if (isAnimating || targetSpread === currentSpread) return;
+    if (targetSpread < 0 || targetSpread > getMaxSpreadIndex()) return;
+
+    isAnimating = true;
+    playPageTurnSound();
+    const container = $('bookContainer');
+
+    // Reduced motion, or book not visible: swap instantly
+    if (!container || !isBookOpen || motionMQ.matches) {
+        currentSpread = targetSpread;
+        renderSpread();
+        isAnimating = false;
+        return;
+    }
+
+    // Mobile single page: smooth slide + fade (no 3D flip)
+    if (ppv === 1) {
+        currentSpread = targetSpread;
+        renderSpread();
+        const dx = direction === 'next' ? 34 : -34;
+        const a = $('rightPage').animate(
+            [{ transform: `translate3d(${dx}px,0,0)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+            { duration: 300, easing: 'cubic-bezier(.2,.7,.2,1)' });
+        const done = () => { isAnimating = false; };
+        a.onfinish = done; a.oncancel = done;
+        return;
+    }
+
+    // Desktop / tablet: 3D leaf
+    const DUR = 900;
+    const leaf = document.createElement('div');
+    let front, back;
+
+    if (direction === 'next') {
+        leaf.className = 'leaf leaf-r';
+        front = faceEl(pageHTML(currentSpread * 2 + 1, 'r', false), 'r', 'front');
+        back  = faceEl(pageHTML(targetSpread * 2, 'l', false), 'l', 'back');
+        $('rightPage').innerHTML = pageHTML(targetSpread * 2 + 1, 'r', true);
+    } else {
+        leaf.className = 'leaf leaf-l';
+        front = faceEl(pageHTML(currentSpread * 2, 'l', false), 'l', 'front');
+        back  = faceEl(pageHTML(targetSpread * 2 + 1, 'r', false), 'r', 'back');
+        $('leftPage').innerHTML = pageHTML(targetSpread * 2, 'l', true);
+    }
+    leaf.append(front, back);
+    container.appendChild(leaf);
+
+    const ease = 'cubic-bezier(.45,.05,.25,1)';
+    leaf.animate([{ transform: 'rotateY(0deg)' }, { transform: `rotateY(${direction === 'next' ? -180 : 180}deg)` }], { duration: DUR, easing: ease, fill: 'forwards' });
+    front.querySelector('.shade').animate([{ opacity: 0 }, { opacity: .55, offset: .5 }, { opacity: .55 }], { duration: DUR, easing: 'linear', fill: 'forwards' });
+    back.querySelector('.shade').animate([{ opacity: .55 }, { opacity: .55, offset: .5 }, { opacity: 0 }], { duration: DUR, easing: 'linear', fill: 'forwards' });
+
+    pendingFlip = {
+        leaf,
+        timer: setTimeout(() => {
+            currentSpread = targetSpread;
             renderSpread();
+            leaf.remove();
+            pendingFlip = null;
+            isAnimating = false;
+        }, DUR + 30)
+    };
+}
+
+function nextPage() {
+    if (isAnimating) return;
+    if (currentSpread < getMaxSpreadIndex()) animatePageTurn(currentSpread + 1, 'next');
+    else showToast('You are on the last page.');
+}
+function prevPage() {
+    if (isAnimating) return;
+    if (currentSpread > 0) animatePageTurn(currentSpread - 1, 'prev');
+    else showToast('You are on the first page.');
+}
+function goToSpread(spreadIdx) {
+    if (isAnimating) return;
+    const target = Math.max(0, Math.min(spreadIdx, getMaxSpreadIndex()));
+    if (target > currentSpread) animatePageTurn(target, 'next');
+    else if (target < currentSpread) animatePageTurn(target, 'prev');
+}
+function goToPage(idx) {
+    const v = Math.floor(idx / ppv);
+    if (!isBookOpen) { currentSpread = v; openBook(); } else goToSpread(v);
+}
+
+/* ============ Sound / theme ============ */
+function playPageTurnSound() {
+    if (!soundEnabled) return;
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const size = Math.floor(audioCtx.sampleRate * 0.18);
+        const buffer = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass'; filter.frequency.value = 1100; filter.Q.value = 1.5;
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+        noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        noise.start();
+    } catch (e) { console.warn('Audio Context error:', e); }
+}
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = $('soundToggleBtn');
+    $('soundIcon').className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+    $('soundState').textContent = soundEnabled ? 'On' : 'Off';
+    btn.classList.toggle('off', !soundEnabled);
+    btn.setAttribute('aria-pressed', soundEnabled);
+    btn.dataset.tip = soundEnabled ? 'Sound on' : 'Sound off';
+    showToast(soundEnabled ? 'Sound effects on' : 'Sound effects off');
+}
+
+function setTheme(theme, silent) {
+    if (!THEMES[theme]) theme = 'paper';
+    [...document.body.classList].filter(c => c.startsWith('theme-')).forEach(c => document.body.classList.remove(c));
+    document.body.classList.add('theme-' + theme);
+    document.querySelectorAll('#themeList .opt').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === theme));
+    const meta = document.querySelector('meta[name=theme-color]');
+    if (meta) meta.content = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#1b1612';
+    if (!silent) showToast(`Theme: ${THEMES[theme].name}`);
+}
+
+/* ============ Read aloud ============ */
+function toggleReadAloud() {
+    if (!('speechSynthesis' in window)) { showToast('Read aloud is not supported in this browser.'); return; }
+    if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
+        updateReadAloudBtnUI();
+        showToast('Read aloud stopped.');
+        return;
+    }
+    let text = '';
+    visibleIdxs().forEach(idx => {
+        const p = bookPages[idx];
+        if (p && p.content) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = p.content;
+            text += ' ' + (tmp.textContent || '');
         }
+    });
+    text = text.trim();
+    if (!text) { showToast('No readable text on this page.'); return; }
 
-        function setupDragListeners() {
-            const container = document.getElementById('bookContainer');
-            let startX = 0;
-            let isDragging = false;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95; u.pitch = 1.0;
+    const sel = $('voiceSelect');
+    if (sel && sel.value !== '') {
+        const v = availableVoices[parseInt(sel.value)];
+        if (v) u.voice = v;
+    } else if (/[\u0900-\u097F]/.test(text)) {
+        const hi = availableVoices.find(v => v.lang.includes('hi') || v.name.toLowerCase().includes('hindi'));
+        if (hi) u.voice = hi;
+    } else {
+        const nat = availableVoices.find(v => v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'));
+        if (nat) u.voice = nat;
+    }
+    u.onend = u.onerror = () => { isSpeaking = false; updateReadAloudBtnUI(); };
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+    isSpeaking = true;
+    speakVoiceName = u.voice ? u.voice.name : 'browser default voice';
+    updateReadAloudBtnUI();
+    closePops();
+}
 
-            container.addEventListener('mousedown', (e) => {
-                if (e.target.closest('button') || e.target.closest('input')) return;
-                startX = e.clientX;
-                isDragging = true;
-            });
+function updateReadAloudBtnUI() {
+    const btn = $('readAloudBtn');
+    if (!btn) return;
+    btn.classList.toggle('speaking', isSpeaking);
+    btn.setAttribute('aria-pressed', isSpeaking);
+    const label = isSpeaking ? 'Stop reading' : 'Read aloud';
+    $('readAloudText').textContent = label;
+    btn.dataset.tip = label;
+    btn.setAttribute('aria-label', label);
+    btn.querySelector('i').className = isSpeaking ? 'fa-solid fa-stop' : 'fa-solid fa-headphones';
+    $('speakChip').classList.toggle('show', isSpeaking);
+    $('speakTxt').textContent = isSpeaking ? `Reading aloud with ${speakVoiceName.slice(0, 28)}` : 'Reading aloud';
+    updateStatus();
+}
 
-            container.addEventListener('mouseup', (e) => {
-                if (!isDragging) return;
-                isDragging = false;
-                const diff = e.clientX - startX;
-                if (diff < -50) nextPage();
-                else if (diff > 50) prevPage();
-            });
+/* ============ PDF upload ============ */
+function setPdfProgress(cur, total, frac) {
+    const pct = Math.round(frac * 100);
+    $('pdfLoadingProgress').textContent = total ? `Page ${cur} of ${total}` : 'Reading file…';
+    $('pdfPct').textContent = pct + '%';
+    $('pdfArc').style.strokeDashoffset = 289.03 * (1 - frac);
+    $('pdfRing').setAttribute('aria-valuenow', pct);
+}
 
-            container.addEventListener('touchstart', (e) => {
-                if (e.target.closest('button') || e.target.closest('input')) return;
-                startX = e.touches[0].clientX;
-                isDragging = true;
-            });
+async function handlePdfUpload(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if ((file.type && file.type !== 'application/pdf') && !/\.pdf$/i.test(file.name)) {
+        showToast('Please choose a PDF file.');
+        input.value = '';
+        return;
+    }
+    if (!window.pdfjsLib) { showToast('PDF engine failed to load. Check your connection.'); input.value = ''; return; }
 
-            container.addEventListener('touchend', (e) => {
-                if (!isDragging) return;
-                isDragging = false;
-                const diff = e.changedTouches[0].clientX - startX;
-                if (diff < -50) nextPage();
-                else if (diff > 50) prevPage();
-            });
+    const cleanName = file.name.replace(/\.pdf$/i, '');
+    pdfBusy = true;
+    closeSheet(); closePops(); closeTOC();
+    $('pdfFileName').textContent = file.name;
+    setPdfProgress(0, 0, 0);
+    $('pdfLoadingModal').classList.add('open');
+
+    let pdf = null;
+    try {
+        const buf = await file.arrayBuffer();
+        pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const total = pdf.numPages;
+        if (!total) throw new Error('Empty PDF');
+        const dpr = window.devicePixelRatio || 1;
+        const scale = total > 150 ? 1.5 : Math.min(2.2, Math.max(1.6, dpr * 1.2));
+        const pages = [];
+
+        for (let i = 1; i <= total; i++) {
+            setPdfProgress(i, total, (i - 1) / total);
+            await nextFrame();
+            const page = await pdf.getPage(i);
+            const vp = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.floor(vp.width);
+            canvas.height = Math.floor(vp.height);
+            const ctx = canvas.getContext('2d', { alpha: false });
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+            const tc = await page.getTextContent();
+            const text = tc.items.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
+            canvas.width = canvas.height = 0;
+            page.cleanup();
+            pages.push({ type: 'pdf', dataUrl, content: `<p>${esc(text)}</p>`, chapter: `PDF Page ${i}`, title: cleanName });
         }
+        setPdfProgress(total, total, 1);
+        await nextFrame();
 
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toastMsg');
-            if (toast && toastMsg) {
-                toastMsg.textContent = msg;
-                toast.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => {
-                    toast.classList.add('opacity-0', 'pointer-events-none');
-                }, 2800);
-            }
+        bookPages = pages;
+        currentSpread = 0;
+        savedBookmarks = [];
+        $('bookTitleDisplay').textContent = cleanName.slice(0, 60);
+        document.title = cleanName;
+        syncClosedCoverTitle(cleanName);
+
+        $('pdfLoadingModal').classList.remove('open');
+        closeBook();
+        updateProgress();
+        showToast(`PDF loaded (${total} ${total === 1 ? 'page' : 'pages'}). Open the cover to read.`);
+    } catch (err) {
+        console.error('PDF parse error:', err);
+        $('pdfLoadingModal').classList.remove('open');
+        showToast('Could not process that PDF. It may be damaged or password-protected.');
+    } finally {
+        pdfBusy = false;
+        input.value = '';
+        if (pdf) pdf.destroy();
+    }
+}
+
+/* ============ Contents & bookmarks drawer ============ */
+function buildTOC() {
+    const vis = new Set(isBookOpen ? visibleIdxs() : [currentSpread * ppv]);
+    $('tocList').innerHTML = bookPages.map((p, i) => {
+        const pdf = p.type === 'pdf';
+        const main = pdf ? (p.chapter || 'Page ' + (i + 1)) : (p.title || p.chapter || 'Page ' + (i + 1));
+        const sub = (!pdf && p.title && p.chapter) ? `<span class="t-sub">${esc(p.chapter)}</span>` : '';
+        const act = vis.has(i);
+        return `<li><button class="toc-item${act ? ' active' : ''}" data-idx="${i}"${act ? ' aria-current="page"' : ''}><span class="t-txt">${sub}<span class="t-main">${esc(main)}</span></span><span class="t-pg">p. ${i + 1}</span></button></li>`;
+    }).join('');
+}
+
+function refreshTOCActive() {
+    if (!$('tocModal').classList.contains('open')) return;
+    const vis = new Set(isBookOpen ? visibleIdxs() : [currentSpread * ppv]);
+    $('tocList').querySelectorAll('.toc-item').forEach(b => {
+        const on = vis.has(+b.dataset.idx);
+        b.classList.toggle('active', on);
+        on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+}
+
+function buildBookmarks() {
+    const list = $('bmList');
+    const marks = savedBookmarks.filter(i => bookPages[i]).sort((a, b) => a - b);
+    $('bmCount').textContent = marks.length ? `(${marks.length})` : '';
+    if (!marks.length) { list.innerHTML = '<li class="empty">No bookmarks yet. Tap the ribbon at the top of a page to save your place.</li>'; return; }
+    list.innerHTML = marks.map(i => {
+        const p = bookPages[i];
+        const label = p.type === 'pdf' ? (p.chapter || '') : (p.title || p.chapter || '');
+        return `<li class="bm-row"><button class="bm-go" data-idx="${i}"><i class="fa-solid fa-bookmark" aria-hidden="true"></i><span class="t-txt"><span class="t-main">Page ${i + 1}</span><span class="t-sub">${esc(label)}</span></span></button><button class="bm-del" data-idx="${i}" aria-label="Remove bookmark from page ${i + 1}"><i class="fa-solid fa-xmark"></i></button></li>`;
+    }).join('');
+}
+
+function setTab(tab) {
+    const ch = tab === 'chapters';
+    $('tabChapters').setAttribute('aria-selected', ch);
+    $('tabMarks').setAttribute('aria-selected', !ch);
+    $('tocList').hidden = !ch;
+    $('bmList').hidden = ch;
+}
+
+function toggleTOC() { $('tocModal').classList.contains('open') ? closeTOC() : openTOC(); }
+
+function openTOC(tab) {
+    closePops(); closeSheet();
+    lastFocus = document.activeElement;
+    buildTOC(); buildBookmarks(); setTab(tab || 'chapters');
+    $('tocModal').classList.add('open');
+    ['tocBtn', 'menuBtn'].forEach(id => $(id).setAttribute('aria-expanded', 'true'));
+    setTimeout(() => {
+        $('tocClose').focus({ preventScroll: true });
+        const a = $('tocList').querySelector('.active');
+        if (a) a.scrollIntoView({ block: 'center' });
+    }, 60);
+}
+
+function closeTOC() {
+    const m = $('tocModal');
+    if (!m.classList.contains('open')) return;
+    m.classList.remove('open');
+    ['tocBtn', 'menuBtn'].forEach(id => $(id).setAttribute('aria-expanded', 'false'));
+    if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+}
+
+function toggleBookmarkCurrent(offset) {
+    const pageIdx = currentSpread * ppv + offset;
+    if (!bookPages[pageIdx]) return;
+    const at = savedBookmarks.indexOf(pageIdx);
+    if (at > -1) {
+        savedBookmarks.splice(at, 1);
+        showToast(`Bookmark removed from page ${pageIdx + 1}`);
+    } else {
+        savedBookmarks.push(pageIdx);
+        bmPulse = pageIdx;
+        showToast(`Bookmarked page ${pageIdx + 1}`);
+    }
+    renderSpread();
+    buildBookmarks();
+}
+
+/* ============ Options sheet (mobile) & popovers (desktop) ============ */
+function toggleSheet() { document.body.classList.contains('sheet-open') ? closeSheet() : openSheet(); }
+function openSheet() {
+    if (!document.body.classList.contains('compact')) return;
+    closeTOC();
+    lastFocus = document.activeElement;
+    document.body.classList.add('sheet-open');
+    $('moreBtn').setAttribute('aria-expanded', 'true');
+    setTimeout(() => { const b = $('uploadBtn'); if (b) b.focus({ preventScroll: true }); }, 60);
+}
+function closeSheet() {
+    if (!document.body.classList.contains('sheet-open')) return;
+    document.body.classList.remove('sheet-open');
+    $('moreBtn').setAttribute('aria-expanded', 'false');
+    if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+}
+
+function togglePop(popId, btnId) {
+    const pop = $(popId), open = !pop.classList.contains('open');
+    closePops();
+    if (open) { pop.classList.add('open'); $(btnId).setAttribute('aria-expanded', 'true'); }
+}
+function closePops() {
+    document.querySelectorAll('.pop.open').forEach(p => p.classList.remove('open'));
+    ['themeBtn', 'voiceBtn'].forEach(id => $(id).setAttribute('aria-expanded', 'false'));
+}
+
+/* ============ Progress slider ============ */
+function initSlider() {
+    const el = $('pageSlider');
+    let dragging = false, preview = 0;
+    const valueAt = x => {
+        const r = el.getBoundingClientRect();
+        const t = Math.min(1, Math.max(0, (x - r.left) / r.width));
+        return Math.round(t * getMaxSpreadIndex());
+    };
+    const show = v => {
+        preview = v;
+        const max = getMaxSpreadIndex();
+        el.style.setProperty('--p', max ? v / max : 0);
+        const first = v * ppv + 1, last = Math.min(bookPages.length, v * ppv + ppv);
+        $('pageProgressText').textContent = first >= last ? `Page ${last} of ${bookPages.length}` : `Pages ${first}–${last} of ${bookPages.length}`;
+        $('pctText').textContent = `${Math.round(last / bookPages.length * 100)}% read`;
+    };
+    el.addEventListener('pointerdown', e => {
+        if (!isBookOpen) return;
+        dragging = true;
+        el.setPointerCapture(e.pointerId);
+        el.classList.add('dragging');
+        show(valueAt(e.clientX));
+    });
+    el.addEventListener('pointermove', e => { if (dragging) show(valueAt(e.clientX)); });
+    const end = () => {
+        if (!dragging) return;
+        dragging = false;
+        el.classList.remove('dragging');
+        if (preview !== currentSpread) goToSpread(preview); else updateProgress();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('keydown', e => {
+        const k = e.key;
+        if (k === 'ArrowRight' || k === 'ArrowUp') nextPage();
+        else if (k === 'ArrowLeft' || k === 'ArrowDown') prevPage();
+        else if (k === 'Home') goToSpread(0);
+        else if (k === 'End') goToSpread(getMaxSpreadIndex());
+        else return;
+        e.preventDefault(); e.stopPropagation();
+    });
+}
+
+/* ============ Drag & swipe ============ */
+function setupDragListeners() {
+    const c = $('bookContainer');
+    let sx = 0, sy = 0, pid = null;
+    c.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (e.target.closest('button, input, select, a, label, [role=slider]')) return;
+        pid = e.pointerId; sx = e.clientX; sy = e.clientY;
+    });
+    window.addEventListener('pointerup', e => {
+        if (e.pointerId !== pid) return;
+        pid = null;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.3) return; // mostly vertical = scrolling
+        dx < 0 ? nextPage() : prevPage();
+    });
+    window.addEventListener('pointercancel', () => { pid = null; });   // browser took over for scrolling
+}
+
+/* ============ Cover tilt / light (fine pointers only) ============ */
+function setupCoverFX() {
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    const view = $('closedBookView'), cover = $('cover');
+    let raf = 0, nx = 0, ny = 0;
+    const apply = () => { raf = 0; cover.style.setProperty('--ty', (-16 + nx * 11) + 'deg'); cover.style.setProperty('--tx', (4 - ny * 7) + 'deg'); };
+    view.addEventListener('pointermove', e => {
+        if (motionMQ.matches) return;
+        const r = cover.getBoundingClientRect();
+        nx = Math.max(-1.2, Math.min(1.2, (e.clientX - (r.left + r.width / 2)) / r.width * 2));
+        ny = Math.max(-1.2, Math.min(1.2, (e.clientY - (r.top + r.height / 2)) / r.height * 2));
+        cover.classList.add('tracking');
+        if (!raf) raf = requestAnimationFrame(apply);
+    });
+    view.addEventListener('pointerleave', () => {
+        cover.classList.remove('tracking');
+        cover.style.removeProperty('--ty'); cover.style.removeProperty('--tx');
+    });
+}
+
+/* ============ Toast ============ */
+function showToast(msg) {
+    const t = $('toast');
+    if (!t) return;
+    $('toastMsg').textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ============ Keyboard ============ */
+function closeTopLayer() {
+    if (pdfBusy) return true;
+    if ($('tocModal').classList.contains('open')) { closeTOC(); return true; }
+    if (document.body.classList.contains('sheet-open')) { closeSheet(); return true; }
+    if (document.querySelector('.pop.open') && !document.body.classList.contains('compact')) { closePops(); return true; }
+    return false;
+}
+
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (e.key === 'Escape') { if (closeTopLayer()) e.preventDefault(); return; }
+    if (t.closest && t.closest('input, select, textarea, [contenteditable="true"]')) return;
+    if (pdfBusy || !isBookOpen) return;
+    if ($('tocModal').classList.contains('open') || document.body.classList.contains('sheet-open')) return;
+    const onControl = t.closest && t.closest('button, a, label, [role=slider]');
+    switch (e.key) {
+        case 'ArrowRight': nextPage(); break;
+        case 'ArrowLeft': prevPage(); break;
+        case ' ': if (onControl) return; nextPage(); break;
+        case 'Home': goToSpread(0); break;
+        case 'End': goToSpread(getMaxSpreadIndex()); break;
+        default: return;
+    }
+    e.preventDefault();
+});
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('.pop-wrap')) closePops();
+});
+
+/* ============ Init ============ */
+window.onload = function () {
+    // Theme list
+    $('themeList').innerHTML = Object.entries(THEMES).map(([k, v]) =>
+        `<button class="opt" data-theme="${k}" aria-pressed="false"><span class="sw" style="background:${v.sw}"></span><span>${v.name}</span><i class="fa-solid fa-check ck" aria-hidden="true"></i></button>`).join('');
+    $('themeList').addEventListener('click', e => {
+        const b = e.target.closest('.opt');
+        if (b) { setTheme(b.dataset.theme); closePops(); }
+    });
+
+    // Drawer lists (delegated)
+    $('tocList').addEventListener('click', e => {
+        const b = e.target.closest('.toc-item');
+        if (!b) return;
+        closeTOC();
+        goToPage(+b.dataset.idx);
+    });
+    $('bmList').addEventListener('click', e => {
+        const del = e.target.closest('.bm-del');
+        if (del) {
+            const i = savedBookmarks.indexOf(+del.dataset.idx);
+            if (i > -1) savedBookmarks.splice(i, 1);
+            buildBookmarks();
+            if (isBookOpen) renderSpread();
+            showToast(`Bookmark removed from page ${+del.dataset.idx + 1}`);
+            return;
         }
+        const go = e.target.closest('.bm-go');
+        if (go) { closeTOC(); goToPage(+go.dataset.idx); }
+    });
 
-        // Initialize Application
-        window.onload = function() {
-            setupDragListeners();
-            loadVoices();
-        };
-    </script>
+    if (!('speechSynthesis' in window)) $('readAloudBtn').setAttribute('aria-disabled', 'true');
+
+    setupDragListeners();
+    initSlider();
+    setupCoverFX();
+    loadVoices();
+    setTheme('paper', true);
+    applyLayout();
+    layoutMQ.addEventListener('change', applyLayout);
+    updateReadAloudBtnUI();
+};
+</script>
 </body>
 </html>
